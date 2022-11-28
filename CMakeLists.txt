@@ -21,8 +21,19 @@ endif()
 include(${CMAKE_BINARY_DIR}/conan.cmake)
 
 conan_cmake_configure(REQUIRES catch2/3.2.0 pybind11/2.10.1 GENERATORS cmake_find_package)
+conan_cmake_autodetect(settings)
+conan_cmake_install(PATH_OR_REFERENCE . BUILD missing SETTINGS ${settings})
 
-conan_cmake_install(PATH_OR_REFERENCE .)
+
+############# catch2
+find_package(Catch2 3 REQUIRED)
+add_executable(tests tests/test.cpp src/hilok.cpp)
+target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
+target_include_directories(tests PRIVATE src)
+include(CTest)
+include(Catch)
+catch_discover_tests(tests)
+enable_testing()
 
 ############# pybind11
 

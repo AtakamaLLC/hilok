@@ -1,33 +1,29 @@
 DELETE_ON_ERROR:
 
-env:
-	python -mvirtualenv env
+venv:
+	python -mvirtualenv venv
 
 requirements:
 	python -mpip install -r requirements.txt
 
-lint:
-	python -m pylint omen2
-	black omen2
+pybuild:
+	python setup.py install --force
 
-docs:
-	PYTHONPATH=. docmd omen2 -o docs -u https://github.com/atakamallc/omen2/blob/master/omen2
+cbuild:
+	mkdir cbuild
 
-black:
-	black omen2 tests
+ctest: cbuild
+	cd cbuild; cmake .. -DCMAKE_BUILD_TYPE=Debug
+	cd cbuild; cmake --build .
+	cd cbuild; ctest -V .
 
-test:
-	pytest -n=3 --cov omen2 -v tests -k "not perf"
-	# parallel testing of perf tests doesn't work
-	pytest --cov omen2 --cov-append -v tests -k "perf"
+pytest:
+	pytest tests
 
 publish:
 	rm -rf dist
 	python3 setup.py bdist_wheel
 	twine upload dist/*
 
-install-hooks:
-	pre-commit install
-
-
-.PHONY: docs black publish env requirements
+.PHONY: publish venv requirements pytest pybuild ctest
+.DELETE_ON_ERROR:
