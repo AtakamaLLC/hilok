@@ -136,11 +136,28 @@ def long_description():
         return contents
 
 
+def get_git_version():
+    try:
+        return (
+            subprocess.run(
+                "git describe --tags --first-parent --exact-match --match 'v*'",
+                shell=True,
+                check=True,
+                capture_output=True,
+                encoding="utf8",
+            )
+            .stdout.rstrip()
+            .lstrip("v")
+        )
+    except Exception:
+        return "0.0.1"
+
+
 # The information here can also be placed in setup.cfg - better separation of
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
     name="hilok",
-    version="1.0.2",
+    version=get_git_version(),
     author="Erik aronesty",
     author_email="erik@atakama.com",
     description="Fast hierarchical locks",
