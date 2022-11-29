@@ -61,6 +61,9 @@ endif()
 
 
 if (UNIX AND NOT APPLE)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/CMake")
 find_package(codecov)
 add_coverage(tests)
+list(APPEND LCOV_REMOVE_PATTERNS "/usr/")
+coverage_evaluate()
 endif()
