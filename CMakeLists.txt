@@ -46,3 +46,11 @@ target_link_libraries(hilok PRIVATE pybind11::headers)
 # settings taken from pybind11 docs
 # see: https://pybind11.readthedocs.io/en/stable/cmake/index.html
 set_target_properties(hilok PROPERTIES INTERPROCEDURAL_OPTIMIZATION ON CXX_VISIBILITY_PRESET ON VISIBILITY_INLINES_HIDDEN ON)
+
+
+############# clang-tidy
+find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
+set(CLANG_TIDY_COMMAND "${CLANG_TIDY_EXE}" "-checks=-*,modernize-*")
+set_target_properties(hilok PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}")
+set_target_properties(tests PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}")
+
