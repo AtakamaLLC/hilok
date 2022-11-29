@@ -44,9 +44,10 @@ struct pair_hash
 class HiLok {
     std::unordered_map<std::pair<void *, std::string>, std::shared_timed_mutex, pair_hash> m_map;
     std::mutex m_mutex;
+    char m_sep;
 public:
 
-    HiLok() {
+    HiLok(char sep = '/') : m_sep (sep) {
     }
     
     virtual ~HiLok() {

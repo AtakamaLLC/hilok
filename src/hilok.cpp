@@ -28,7 +28,7 @@ HiHandle HiLok::read(std::string_view path, bool block, int timeout) {
     std::pair<void *, std::string> key;
     std::vector<std::shared_timed_mutex *>refs;
     try {
-        for (auto it = PathSplit(path); it != it.end(); ++it) {
+        for (auto it = PathSplit(path, m_sep); it != it.end(); ++it) {
             key = {cur, *it};
             std::shared_timed_mutex *mut;
             {
@@ -53,7 +53,7 @@ HiHandle HiLok::write(std::string_view path, bool block, int timeout) {
     std::pair<void *, std::string> key;
     std::vector<std::shared_timed_mutex *>refs;
     try {
-        for (auto it = PathSplit(path); it != it.end(); ) {
+        for (auto it = PathSplit(path, m_sep); it != it.end(); ) {
             key = {cur, *it};
             ++it;
             std::shared_timed_mutex *mut;
