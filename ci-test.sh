@@ -2,7 +2,7 @@
 
 set -o errexit
 
-python3 -m virtualenv env
+python3 -m venv env
 . ./env/bin/activate || . ./env/Scripts/activate
 make requirements
 make ctest

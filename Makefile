@@ -1,7 +1,7 @@
 DELETE_ON_ERROR:
 
 venv:
-	python -mvirtualenv venv
+	python -mvenv venv
 
 requirements:
 	python -mpip install -r requirements.txt
