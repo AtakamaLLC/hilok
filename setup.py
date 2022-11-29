@@ -145,6 +145,7 @@ setup(
     author_email="erik@atakama.com",
     description="Fast hierarchical locks",
     long_description=long_description(),
+    long_description_content_type="text/markdown",
     ext_modules=[CMakeExtension("hilok")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
