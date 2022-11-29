@@ -140,10 +140,11 @@ def long_description():
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
     name="hilok",
-    version="1.0.1",
+    version="1.0.2",
     author="Erik aronesty",
     author_email="erik@atakama.com",
     description="Fast hierarchical locks",
+    url="https://github.com/AtakamaLLC/hilok",
     long_description=long_description(),
     long_description_content_type="text/markdown",
     ext_modules=[CMakeExtension("hilok")],
