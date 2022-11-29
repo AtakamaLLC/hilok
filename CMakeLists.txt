@@ -58,3 +58,9 @@ set(CLANG_TIDY_COMMAND "${CLANG_TIDY_EXE}" "-checks=-*,modernize-*")
 set_target_properties(hilok PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}")
 set_target_properties(tests PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}")
 endif()
+
+
+if (UNIX AND NOT APPLE)
+find_package(codecov)
+add_coverage(tests)
+endif

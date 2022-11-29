@@ -1,4 +1,7 @@
-DELETE_ON_ERROR:
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+    CTESTFLAGS += -T memcheck
+endif
 
 venv:
 	python -mvenv venv
@@ -15,7 +18,7 @@ cbuild:
 ctest: cbuild
 	cd cbuild; cmake .. -DCMAKE_BUILD_TYPE=Debug
 	cd cbuild; cmake --build .
-	cd cbuild; ctest -V .
+	cd cbuild; ctest -V --output-on-failure $(CTESTFLAGS) .
 
 pytest:
 	pytest tests
