@@ -3,6 +3,8 @@
 #include <hilok.hpp>
 #include <psplit.hpp>
 
+#include <thread>
+
 TEST_CASE( "path-split-basic", "[basic]" ) {
     std::vector<std::string> res;
     auto expect = std::vector<std::string>({"a", "b", "c"});
