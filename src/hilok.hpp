@@ -2,6 +2,7 @@
 #include <string_view>
 #include <shared_mutex>
 #include <unordered_map>
+#include <vector>
 
 class HiErr : public std::runtime_error {
     using std::runtime_error::runtime_error;
