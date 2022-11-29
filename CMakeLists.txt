@@ -63,4 +63,4 @@ endif()
 if (UNIX AND NOT APPLE)
 find_package(codecov)
 add_coverage(tests)
-endif
+endif()
