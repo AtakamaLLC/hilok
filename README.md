@@ -3,7 +3,7 @@
 ```
 from hilok import HiLok
 
-h = HiLok()
+h = HiLok()     # default sep is '/', can pass it in here
 
 rd = h.read("/some/path")
 
@@ -19,4 +19,8 @@ wr = h.write("/some")
 
 # timeout=0 is the the same as block=False
 rd = h.read("/some/path", block=False)
+
+# with syntax is fine:
+with h.read("/some/path"):
+    pass
 ```

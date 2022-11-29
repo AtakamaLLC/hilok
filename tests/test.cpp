@@ -27,7 +27,7 @@ TEST_CASE( "path-split-trims", "[basic]" ) {
 TEST_CASE( "path-split-empty", "[basic]" ) {
     std::vector<std::string> res;
     auto expect = std::vector<std::string>({});
-    for (auto it=PathSplit("////"); it != it.end(); ++it) {
+    for (auto it=PathSplit("::::", ':'); it != it.end(); ++it) {
         res.push_back(*it);
     }
     REQUIRE(res == expect);

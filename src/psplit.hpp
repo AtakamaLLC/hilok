@@ -4,18 +4,18 @@
 class PathSplit {
   
     std::string_view m_vw;
+    char m_sep;
     int next;
 
 
 public:
 
 
-    PathSplit(std::string_view path) {
-        m_vw = path;
-        while (!m_vw.empty() && m_vw[0] == '/') {
+    PathSplit(std::string_view path, char sep='/') : m_vw(path), m_sep(sep) {
+        while (!m_vw.empty() && m_vw[0] == m_sep) {
             m_vw.remove_prefix(1);
         }
-        next = m_vw.find('/');
+        next = m_vw.find(m_sep);
     }
 
     std::string operator *() {
@@ -29,10 +29,10 @@ public:
     PathSplit & operator ++() {
         if (next != std::string_view::npos) {
             m_vw.remove_prefix(next + 1);
-            while (!m_vw.empty() && m_vw[0] == '/') {
+            while (!m_vw.empty() && m_vw[0] == m_sep) {
                 m_vw.remove_prefix(1);
             }
-            next = m_vw.find('/');
+            next = m_vw.find(m_sep);
         } else {
             m_vw.remove_prefix(m_vw.size());
         }
