@@ -1,4 +1,7 @@
 build/
+cbuild/
+ccenv/
+venv/
 dist/
 *.egg-info/
 *.swp

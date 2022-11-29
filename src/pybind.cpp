@@ -14,11 +14,12 @@ PYBIND11_MODULE(hilok, m)
         ;
 
     py::class_<HiHandle>(m, "HiHandle")
-        .def(py::init<>())
         .def("release", &HiHandle::release)
         .def("__enter__", [](HiHandle &hh) {})
         .def("__exit__", [](HiHandle &hh, const py::object &, const py::object &, const py::object &) { hh.release(); })
         ;
+
+    py::register_exception<HiErr>(m, "HiLokError", PyExc_TimeoutError);
 
     #ifdef VERSION_INFO
         m.attr("__version__") = VERSION_INFO;
