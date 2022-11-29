@@ -25,7 +25,7 @@ pytest:
 
 publish:
 	rm -rf dist
-	python setup.py bdist_wheel
+	python setup.py bdist bdist_wheel
 	twine upload dist/*
 
 .PHONY: publish venv requirements pytest pybuild ctest
