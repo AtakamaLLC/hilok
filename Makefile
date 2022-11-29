@@ -7,6 +7,7 @@ venv:
 	python -mvenv venv
 
 requirements:
+	python -mpip install --upgrade pip
 	python -mpip install -r requirements.txt
 
 pybuild:
