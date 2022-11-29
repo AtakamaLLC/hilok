@@ -140,7 +140,7 @@ def long_description():
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
     name="hilok",
-    version="0.0.1",
+    version="1.0.1",
     author="Erik aronesty",
     author_email="erik@atakama.com",
     description="Fast hierarchical locks",

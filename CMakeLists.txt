@@ -27,8 +27,10 @@ conan_cmake_install(PATH_OR_REFERENCE . BUILD missing SETTINGS ${settings})
 
 ############# catch2
 find_package(Catch2 3 REQUIRED)
+find_package(Threads REQUIRED)
 add_executable(tests tests/test.cpp src/hilok.cpp)
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(tests PRIVATE Threads::Threads)
 target_include_directories(tests PRIVATE src)
 include(CTest)
 include(Catch)
