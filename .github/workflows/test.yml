@@ -13,11 +13,11 @@ jobs:
       matrix:
         info:
           - os: ubuntu-latest
-            python: 3.9
+            python: "3.9"
           - os: windows-latest
-            python: 3.9
+            python: "3.9"
           - os: macos-latest
-            python: 3.10
+            python: "3.10"
     name: ${{matrix.info.os}} ${{ matrix.info.python }}
     steps:
     - uses: actions/checkout@v2
