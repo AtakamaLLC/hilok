@@ -26,6 +26,8 @@ conan_cmake_install(PATH_OR_REFERENCE . BUILD missing SETTINGS ${settings})
 
 
 ############# catch2
+option(ENABLE_TESTS "Enable tests" OFF)
+if (${ENABLE_TESTS})
 find_package(Catch2 3 REQUIRED)
 find_package(Threads REQUIRED)
 add_executable(tests tests/test.cpp src/hilok.cpp)
@@ -35,10 +37,14 @@ target_include_directories(tests PRIVATE src)
 include(CTest)
 include(Catch)
 catch_discover_tests(tests)
+if (UNIX AND NOT APPLE)
+    set(CATCH_ENABLE_COVERAGE ON)
+endif()
 enable_testing()
+endif()
+
 
 ############# pybind11
-
 find_package(pybind11 REQUIRED)
 
 pybind11_add_module(hilok src/pybind.cpp src/hilok.cpp)
@@ -51,15 +57,14 @@ set_target_properties(hilok PROPERTIES INTERPROCEDURAL_OPTIMIZATION ON VISIBILIT
 
 
 ############# clang-tidy
-
 if (NOT APPLE)
 find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
 set(CLANG_TIDY_COMMAND "${CLANG_TIDY_EXE}" "-checks=-*,modernize-*,-*-use-trailing-return-type")
 set_target_properties(hilok PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}")
+if (${ENABLE_TESTS})
 set_target_properties(tests PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}")
 endif()
-
-
-if (UNIX AND NOT APPLE)
-    set(CATCH_ENABLE_COVERAGE, ON)
 endif()
+
+
+

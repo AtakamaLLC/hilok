@@ -17,7 +17,7 @@ cbuild:
 	mkdir cbuild
 
 ctest: cbuild
-	cd cbuild; cmake .. -DCMAKE_BUILD_TYPE=Debug
+	cd cbuild; cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=On
 	cd cbuild; cmake --build .
 	cd cbuild; ctest -V --output-on-failure $(CTESTFLAGS) .
 
