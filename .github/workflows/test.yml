@@ -8,7 +8,7 @@ on:
 
 jobs:
   ci:
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.info.os }}
     strategy:
       matrix:
         info:
