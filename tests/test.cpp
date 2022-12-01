@@ -111,6 +111,32 @@ TEST_CASE( "wr-after-rel", "[basic]" ) {
 }
 
 
+void rlock_worker(int i, HiMutex &h, int &ctr) {
+    h.lock();
+    h.lock();
+    INFO("got write lock" << i);
+    ctr++;
+    h.unlock();
+    h.unlock();
+}
+
+TEST_CASE( "test-rlock", "[basic]" ) {
+    HiMutex mut;
+    int ctr = 0;
+    int pool_size = 100;
+    std::vector<std::thread> threads;
+    for(unsigned int i = 0; i < pool_size; ++i)
+    {
+        threads.emplace_back(std::thread([&] () { rlock_worker(i, mut, ctr); } ));
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+    CHECK(ctr == pool_size);
+    CHECK(mut.is_locked() == false);
+}
+
 void worker(int i, HiLok &h, int &ctr) {
     auto l1 = h.write("a/b/c/d/e");
     INFO("got write lock" << i);
@@ -121,7 +147,7 @@ void worker(int i, HiLok &h, int &ctr) {
 TEST_CASE( "many-threads", "[basic]" ) {
     HiLok h;
     int ctr = 0;
-    int pool_size = 100;
+    int pool_size = 200;
     std::vector<std::thread> threads;
     for(unsigned int i = 0; i < pool_size; ++i)
     {
@@ -131,6 +157,6 @@ TEST_CASE( "many-threads", "[basic]" ) {
     for (auto& thread : threads) {
         thread.join();
     }
-    REQUIRE(ctr == pool_size);
+    CHECK(ctr == pool_size);
 }
 
