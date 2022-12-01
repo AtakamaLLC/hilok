@@ -5,6 +5,8 @@
 
 #include <thread>
 
+#include <iostream>
+
 TEST_CASE( "path-split-basic", "[basic]" ) {
     std::vector<std::string> res;
     auto expect = std::vector<std::string>({"a", "b", "c"});
@@ -42,11 +44,34 @@ TEST_CASE( "path-split-one", "[basic]" ) {
     REQUIRE(res == expect);
 }
 
+TEST_CASE( "ex-lock-unlock", "[basic]" ) {
+    HiLok h;
+    std::cout << "here 1" << std::endl;
+    auto l1 = h.write("a");
+    l1.release();
+    
+    auto l2 = h.write("a", false);
+    l2.release();
+}
+
+TEST_CASE( "sh-lock-unlock", "[basic]" ) {
+    HiLok h;
+    std::cout << "here 1" << std::endl;
+    auto l1 = h.read("a");
+    l1.release();
+    
+    auto l2 = h.read("a");
+    l2.release();
+}
+
 TEST_CASE( "rd-in-wr", "[basic]" ) {
     HiLok h;
+    std::cout << "here 1" << std::endl;
     auto l1 = h.write("a/b/c");
+    std::cout << "here 2" << std::endl;
     REQUIRE_THROWS(h.write("a", false));
     REQUIRE_THROWS(h.write("a/b", false));
+    std::cout << "here 3" << std::endl;
 
     INFO("read lock while write");
     auto l2 = h.read("a/b", false);
