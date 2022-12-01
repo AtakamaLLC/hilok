@@ -3,7 +3,7 @@ from hilok import HiLok, HiLokError
 
 
 def test_wr_no_lev():
-    h = HiLok()
+    h = HiLok(recursive=False)
     lk = h.write("/a/b")
     lk.release()
     lk = h.write("/a/b")
@@ -13,7 +13,7 @@ def test_wr_no_lev():
 
 
 def test_with_wr():
-    h = HiLok()
+    h = HiLok(recursive=False)
     with h.write("/a/b"):
         with pytest.raises(HiLokError):
             h.write("/a/b", block=False)
@@ -22,7 +22,7 @@ def test_with_wr():
 
 
 def test_other_sep():
-    h = HiLok(":")
+    h = HiLok(":", recursive=False)
     with h.read("a:b"):
         with pytest.raises(HiLokError):
             h.write("a", block=False)

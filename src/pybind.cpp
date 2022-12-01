@@ -9,7 +9,8 @@ PYBIND11_MODULE(hilok, m)
     m.doc() = "Hierarchical lock manager";
     py::class_<HiLok>(m, "HiLok")
         .def(py::init<>())
-        .def(py::init<char>(), py::arg("/"))
+        .def(py::init<char>(), py::arg("sep") = '/')
+        .def(py::init<char, bool>(), py::arg("sep") = '/', py::arg("recursive") = true)
         .def("write", &HiLok::write, py::arg("path"), py::arg("block") = true, py::arg("timeout") = 0)
         .def("read", &HiLok::read, py::arg("path"), py::arg("block") = true, py::arg("timeout") = 0)
         ;
