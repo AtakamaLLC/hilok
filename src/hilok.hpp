@@ -5,6 +5,7 @@
 #include <map>
 #include <vector>
 #include <thread>
+#include <atomic>
 
 #include <iostream>
 
@@ -14,22 +15,35 @@ class HiErr : public std::runtime_error {
 
 
 class HiMutex {
+    
 public:
     std::thread::id m_ex_id;
     int m_ex_cnt;
     std::map<std::thread::id, int> m_shared;
     std::shared_timed_mutex m_mut;
+    std::mutex m_internal_mut;
+    bool m_recursive;
 
-    HiMutex() : m_ex_cnt(0) {
+    HiMutex(bool recursive) : m_ex_cnt(0), m_recursive(recursive) {
     }
 
     bool _has_lock() {
         return m_ex_cnt > 0 && m_ex_id == std::this_thread::get_id();
     }
 
-    void lock() {
+    bool _do_lock() {
+        if (!m_recursive)
+            return false;
+        std::lock_guard<std::mutex> guard(m_internal_mut);
         if (_has_lock()) {
             ++m_ex_cnt;
+            return true;
+        }
+        return false;
+    }
+
+    void lock() {
+        if (_do_lock()) {
             return;
         }
         m_mut.lock();
@@ -42,8 +56,7 @@ public:
     }
 
     bool try_lock() {
-        if (_has_lock()) {
-            ++m_ex_cnt;
+        if (_do_lock()) {
             return true;
         }
         if (m_mut.try_lock()) {
@@ -54,8 +67,7 @@ public:
     }
 
     bool try_lock_for(int secs) {
-        if (_has_lock()) {
-            ++m_ex_cnt;
+        if (_do_lock()) {
             return true;
         }
         if (m_mut.try_lock_for(std::chrono::seconds(secs))) {
@@ -67,8 +79,14 @@ public:
 
     void unlock() {
         if (!_has_lock()) throw HiErr("invalid unlock");
-        --m_ex_cnt;
-        m_mut.unlock();
+        if (m_recursive) {
+            --m_ex_cnt;
+            if (m_ex_cnt == 0) {
+                m_mut.unlock();
+            }
+        } else {
+            m_mut.unlock();
+        }
     }
     
     bool is_locked() {
@@ -81,43 +99,34 @@ public:
     }
 
     void lock_shared() {
-        if (_has_lock_shared()) {
-            ++m_shared[std::this_thread::get_id()];
-            return;
-        }
         m_mut.lock_shared();
-        _start_lock_shared();
+        _add_lock_shared();
     }
 
-    void _start_lock_shared() {
-        m_shared[std::this_thread::get_id()] = 1;
+    void _add_lock_shared() {
+        std::lock_guard<std::mutex> guard(m_internal_mut);
+        m_shared[std::this_thread::get_id()] += 1;
     }
 
     bool try_lock_shared() {
-        if (_has_lock_shared()) {
-            ++m_shared[std::this_thread::get_id()];
-            return true;
-        }
         if (m_mut.try_lock_shared()) {
-            _start_lock_shared();
+            _add_lock_shared();
             return true;
         }
         return false;
     }
 
     bool try_lock_shared_for(int secs) {
-        if (_has_lock_shared()) {
-            ++m_shared[std::this_thread::get_id()];
-            return true;
-        }
         if (m_mut.try_lock_shared_for(std::chrono::seconds(secs))) {
-            _start_lock_shared();
+            _add_lock_shared();
             return true;
         }
         return false;
     }
 
     void unlock_shared() {
+        std::lock_guard<std::mutex> guard(m_internal_mut);
+
         if (!_has_lock_shared()) throw HiErr("invalid shared unlock");
 
         --m_shared[std::this_thread::get_id()];
@@ -132,9 +141,9 @@ public:
 
 class HiKeyRef {
 public:
-    HiMutex *m_mut;
+    std::shared_ptr<HiMutex> m_mut;
     std::pair<void *, std::string> m_key;
-    HiKeyRef(HiMutex *mut, std::pair<void *, std::string> key) : m_mut(mut), m_key(key) {
+    HiKeyRef(std::shared_ptr<HiMutex> mut, std::pair<void *, std::string> key) : m_mut(mut), m_key(key) {
     }
 };
 
@@ -165,12 +174,15 @@ struct pair_hash
 
 
 class HiLok {
-    std::unordered_map<std::pair<void *, std::string>, HiMutex, pair_hash> m_map;
+    std::unordered_map<std::pair<void *, std::string>, std::shared_ptr<HiMutex>, pair_hash> m_map;
     std::mutex m_mutex;
     char m_sep;
+    bool m_recursive;
+    std::shared_ptr<HiMutex> _get_mutex(std::pair<void *, std::string> key);
+
 public:
 
-    HiLok(char sep = '/') : m_sep (sep) {
+    HiLok(char sep = '/', bool recursive=true) : m_sep(sep), m_recursive(recursive) {
     }
     
     virtual ~HiLok() {
@@ -181,4 +193,6 @@ public:
     HiHandle write(std::string_view path, bool block = true, int timeout = 0);
 
     void erase_safe(HiKeyRef &ref);
+
+    size_t size() const { return m_map.size(); };
 };

@@ -46,7 +46,6 @@ TEST_CASE( "path-split-one", "[basic]" ) {
 
 TEST_CASE( "ex-lock-unlock", "[basic]" ) {
     HiLok h;
-    std::cout << "here 1" << std::endl;
     auto l1 = h.write("a");
     l1.release();
     
@@ -56,7 +55,6 @@ TEST_CASE( "ex-lock-unlock", "[basic]" ) {
 
 TEST_CASE( "sh-lock-unlock", "[basic]" ) {
     HiLok h;
-    std::cout << "here 1" << std::endl;
     auto l1 = h.read("a");
     l1.release();
     
@@ -65,13 +63,10 @@ TEST_CASE( "sh-lock-unlock", "[basic]" ) {
 }
 
 TEST_CASE( "rd-in-wr", "[basic]" ) {
-    HiLok h;
-    std::cout << "here 1" << std::endl;
+    HiLok h('/', false);;
     auto l1 = h.write("a/b/c");
-    std::cout << "here 2" << std::endl;
     REQUIRE_THROWS(h.write("a", false));
     REQUIRE_THROWS(h.write("a/b", false));
-    std::cout << "here 3" << std::endl;
 
     INFO("read lock while write");
     auto l2 = h.read("a/b", false);
@@ -94,14 +89,13 @@ TEST_CASE( "rd-in-wr", "[basic]" ) {
 }
 
 TEST_CASE( "wr-after-rel", "[basic]" ) {
-    HiLok h;
+    HiLok h('/', false);
     auto l1 = h.write("a/b/c");
     l1.release();
 
     INFO("write lock root after full release");
     auto l4 = h.write("a", false);
     
-
     INFO("read child fails after write root");
     REQUIRE_THROWS(h.read("a/b", false));
     l4.release();
@@ -110,18 +104,24 @@ TEST_CASE( "wr-after-rel", "[basic]" ) {
     h.read("a/b", false);
 }
 
+TEST_CASE( "rlock-simple", "[basic]" ) {
+    HiMutex h(true);
+    h.lock();
+    CHECK(h.try_lock());
+    h.unlock();
+    h.unlock();
+}
 
 void rlock_worker(int i, HiMutex &h, int &ctr) {
     h.lock();
     h.lock();
-    INFO("got write lock" << i);
     ctr++;
     h.unlock();
     h.unlock();
 }
 
-TEST_CASE( "test-rlock", "[basic]" ) {
-    HiMutex mut;
+TEST_CASE( "rlock-thread", "[basic]" ) {
+    HiMutex mut(true);
     int ctr = 0;
     int pool_size = 100;
     std::vector<std::thread> threads;
@@ -137,14 +137,38 @@ TEST_CASE( "test-rlock", "[basic]" ) {
     CHECK(mut.is_locked() == false);
 }
 
-void worker(int i, HiLok &h, int &ctr) {
-    auto l1 = h.write("a/b/c/d/e");
-    INFO("got write lock" << i);
-    ctr++;
-    l1.release();
+void shared_lock_worker(int i, HiMutex &h) {
+    h.lock_shared();
+    h.lock_shared();
+    h.unlock_shared();
+    h.unlock_shared();
 }
 
-TEST_CASE( "many-threads", "[basic]" ) {
+TEST_CASE( "shared-lock-thread", "[basic]" ) {
+    HiMutex mut(true);
+    int pool_size = 100;
+    std::vector<std::thread> threads;
+    for(unsigned int i = 0; i < pool_size; ++i)
+    {
+        threads.emplace_back(std::thread([&] () { shared_lock_worker(i, mut); } ));
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+    CHECK(mut.is_locked() == false);
+}
+
+
+void worker(int i, HiLok &h, int &ctr) {
+    auto l1 = h.write("a/b/c/d/e");
+    auto l2 = h.write("a/b/c/d/e");
+    ctr++;
+    l1.release();
+    l2.release();
+}
+
+TEST_CASE( "deep-many-threads", "[basic]" ) {
     HiLok h;
     int ctr = 0;
     int pool_size = 200;
@@ -158,5 +182,32 @@ TEST_CASE( "many-threads", "[basic]" ) {
         thread.join();
     }
     CHECK(ctr == pool_size);
+    CHECK(h.size() == 0);
+}
+
+
+void nesty_worker(int i, HiLok &h, int &ctr) {
+    auto l2 = h.read("a/b/c");
+    auto l1 = h.write("a/b/c/d/e");
+    ctr++;
+    l1.release();
+    l2.release();
+}
+
+TEST_CASE( "deep-nesty-threads", "[basic]" ) {
+    HiLok h;
+    int ctr = 0;
+    int pool_size = 200;
+    std::vector<std::thread> threads;
+    for(unsigned int i = 0; i < pool_size; ++i)
+    {
+        threads.emplace_back(std::thread([&] () { nesty_worker(i, h, ctr); } ));
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+    CHECK(ctr == pool_size);
+    CHECK(h.size() == 0);
 }
 
