@@ -6,7 +6,7 @@ class PathSplit {
   
     std::string_view m_vw;
     char m_sep;
-    int next;
+    size_t next;
 
 
 public:

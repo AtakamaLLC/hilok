@@ -148,8 +148,8 @@ public:
 class HiLok;
 
 class HiHandle {
-    std::vector<HiKeyRef> m_refs;
     bool m_shared;
+    std::vector<HiKeyRef> m_refs;
     HiLok &m_mgr;
 
 public:
