@@ -20,6 +20,16 @@ def test_with_wr():
     with h.write("/a/b", block=False):
         pass
 
+def test_with_rd():
+    h = HiLok(recursive=False)
+    with h.read("/a/b"):
+        with h.read("/a/b", block=False):
+            pass
+        with pytest.raises(HiLokError):
+            h.write("/a/b", block=False)
+    with h.write("/a/b", block=False):
+        pass
+
 
 def test_other_sep():
     h = HiLok(":", recursive=False)
