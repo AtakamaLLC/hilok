@@ -5,8 +5,6 @@
 
 #include <thread>
 
-#include <iostream>
-
 TEST_CASE( "path-split-basic", "[basic]" ) {
     std::vector<std::string> res;
     auto expect = std::vector<std::string>({"a", "b", "c"});
@@ -25,11 +23,19 @@ TEST_CASE( "path-split-trims", "[basic]" ) {
     REQUIRE(res == expect);
 }
 
-
 TEST_CASE( "path-split-empty", "[basic]" ) {
     std::vector<std::string> res;
     auto expect = std::vector<std::string>({});
     for (auto it=PathSplit("::::", ':'); it != it.end(); ++it) {
+        res.push_back(*it);
+    }
+    REQUIRE(res == expect);
+}
+
+TEST_CASE( "path-split-very-empty", "[basic]" ) {
+    std::vector<std::string> res;
+    auto expect = std::vector<std::string>({});
+    for (auto it=PathSplit(""); it != it.end(); ++it) {
         res.push_back(*it);
     }
     REQUIRE(res == expect);
@@ -112,7 +118,7 @@ TEST_CASE( "rlock-simple", "[basic]" ) {
     h.unlock();
 }
 
-void rlock_worker(int i, HiMutex &h, int &ctr) {
+void rlock_worker(int, HiMutex &h, int &ctr) {
     h.lock();
     h.lock();
     ctr++;
@@ -125,7 +131,7 @@ TEST_CASE( "rlock-thread", "[basic]" ) {
     int ctr = 0;
     int pool_size = 100;
     std::vector<std::thread> threads;
-    for(unsigned int i = 0; i < pool_size; ++i)
+    for(int i = 0; i < pool_size; ++i)
     {
         threads.emplace_back(std::thread([&] () { rlock_worker(i, mut, ctr); } ));
     }
@@ -137,7 +143,7 @@ TEST_CASE( "rlock-thread", "[basic]" ) {
     CHECK(mut.is_locked() == false);
 }
 
-void shared_lock_worker(int i, HiMutex &h) {
+void shared_lock_worker(int, HiMutex &h) {
     h.lock_shared();
     h.lock_shared();
     h.unlock_shared();
@@ -148,7 +154,7 @@ TEST_CASE( "shared-lock-thread", "[basic]" ) {
     HiMutex mut(true);
     int pool_size = 100;
     std::vector<std::thread> threads;
-    for(unsigned int i = 0; i < pool_size; ++i)
+    for(int i = 0; i < pool_size; ++i)
     {
         threads.emplace_back(std::thread([&] () { shared_lock_worker(i, mut); } ));
     }
@@ -160,7 +166,7 @@ TEST_CASE( "shared-lock-thread", "[basic]" ) {
 }
 
 
-void worker(int i, HiLok &h, int &ctr) {
+void worker(int, HiLok &h, int &ctr) {
     auto l1 = h.write("a/b/c/d/e");
     auto l2 = h.write("a/b/c/d/e");
     ctr++;
@@ -173,7 +179,7 @@ TEST_CASE( "deep-many-threads", "[basic]" ) {
     int ctr = 0;
     int pool_size = 200;
     std::vector<std::thread> threads;
-    for(unsigned int i = 0; i < pool_size; ++i)
+    for(int i = 0; i < pool_size; ++i)
     {
         threads.emplace_back(std::thread([&] () { worker(i, h, ctr); } ));
     }
@@ -186,7 +192,7 @@ TEST_CASE( "deep-many-threads", "[basic]" ) {
 }
 
 
-void nesty_worker(int i, HiLok &h, int &ctr) {
+void nesty_worker(int, HiLok &h, int &ctr) {
     auto l2 = h.read("a/b/c");
     auto l1 = h.write("a/b/c/d/e");
     ctr++;
@@ -199,9 +205,35 @@ TEST_CASE( "deep-nesty-threads", "[basic]" ) {
     int ctr = 0;
     int pool_size = 200;
     std::vector<std::thread> threads;
-    for(unsigned int i = 0; i < pool_size; ++i)
+    for(int i = 0; i < pool_size; ++i)
     {
         threads.emplace_back(std::thread([&] () { nesty_worker(i, h, ctr); } ));
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+    CHECK(ctr == pool_size);
+    CHECK(h.size() == 0);
+}
+
+
+void randy_worker(int i, HiLok &h, int &ctr) {
+    const char * paths[] = {"a", "a/b", "a/b/c", "a/b/c/d", "a/b/c/d/e"};
+    int depth = (i % 5);
+    auto l1 = h.write(paths[depth]);
+    ctr++;
+    l1.release();
+}
+
+TEST_CASE( "randy-threads", "[basic]" ) {
+    HiLok h;
+    int ctr = 0;
+    int pool_size = 100;
+    std::vector<std::thread> threads;
+    for(int i = 0; i < pool_size; ++i)
+    {
+        threads.emplace_back(std::thread([&] () { randy_worker(i, h, ctr); } ));
     }
 
     for (auto& thread : threads) {

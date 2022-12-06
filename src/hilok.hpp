@@ -7,8 +7,6 @@
 #include <thread>
 #include <atomic>
 
-#include <iostream>
-
 class HiErr : public std::runtime_error {
     using std::runtime_error::runtime_error;
 };
@@ -66,11 +64,11 @@ public:
         return false;
     }
 
-    bool try_lock_for(int secs) {
+    bool try_lock_for(double secs) {
         if (_do_lock()) {
             return true;
         }
-        if (m_mut.try_lock_for(std::chrono::seconds(secs))) {
+        if (m_mut.try_lock_for(std::chrono::duration<double>(secs))) {
             _start_lock();
             return true;
         }
@@ -116,8 +114,8 @@ public:
         return false;
     }
 
-    bool try_lock_shared_for(int secs) {
-        if (m_mut.try_lock_shared_for(std::chrono::seconds(secs))) {
+    bool try_lock_shared_for(double secs) {
+        if (m_mut.try_lock_shared_for(std::chrono::duration<double>(secs))) {
             _add_lock_shared();
             return true;
         }
@@ -188,9 +186,9 @@ public:
     virtual ~HiLok() {
     }
 
-    HiHandle read(std::string_view path, bool block = true, int timeout = 0);
+    HiHandle read(std::string_view path, bool block = true, double timeout = 0);
     
-    HiHandle write(std::string_view path, bool block = true, int timeout = 0);
+    HiHandle write(std::string_view path, bool block = true, double timeout = 0);
 
     void erase_safe(HiKeyRef &ref);
 

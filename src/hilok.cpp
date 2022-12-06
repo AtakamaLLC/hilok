@@ -1,7 +1,7 @@
 #include "hilok.hpp"
 #include "psplit.hpp"
 
-bool lock_with_params(HiMutex &mut, bool block, int timeout) {
+bool lock_with_params(HiMutex &mut, bool block, double timeout) {
     if (!block) {
         return mut.try_lock();
     } else if (timeout) {
@@ -12,7 +12,7 @@ bool lock_with_params(HiMutex &mut, bool block, int timeout) {
     }
 }
 
-bool shared_lock_with_params(HiMutex &mut, bool block, int timeout) {
+bool shared_lock_with_params(HiMutex &mut, bool block, double timeout) {
     if (!block) {
         return mut.try_lock_shared();
     } else if (timeout) {
@@ -37,7 +37,7 @@ void HiHandle::release() {
     }
 }
 
-HiHandle HiLok::read(std::string_view path, bool block, int timeout) {
+HiHandle HiLok::read(std::string_view path, bool block, double timeout) {
     void *cur = nullptr;
     std::pair<void *, std::string> key;
     std::vector<HiKeyRef> refs;
@@ -47,7 +47,6 @@ HiHandle HiLok::read(std::string_view path, bool block, int timeout) {
             std::shared_ptr<HiMutex> mut = _get_mutex(key);
             bool ok = shared_lock_with_params(*mut, block, timeout);
             if (!ok) {
-                mut.reset();
                 throw HiErr("failed to lock");
             }
             refs.emplace_back(mut, key);
@@ -73,7 +72,7 @@ std::shared_ptr<HiMutex> HiLok::_get_mutex(std::pair<void *, std::string> key) {
 }
 
 
-HiHandle HiLok::write(std::string_view path, bool block, int timeout) {
+HiHandle HiLok::write(std::string_view path, bool block, double timeout) {
     void *cur = nullptr;
     std::pair<void *, std::string> key;
     std::vector<HiKeyRef>refs;
@@ -90,7 +89,6 @@ HiHandle HiLok::write(std::string_view path, bool block, int timeout) {
                 ok = lock_with_params(*mut, block, timeout);
 
             if (!ok) {
-                mut.reset();
                 throw HiErr("failed to lock");
             }
 
@@ -99,6 +97,7 @@ HiHandle HiLok::write(std::string_view path, bool block, int timeout) {
         }
     } catch (...) {
         auto hh = HiHandle(*this, true, refs);
+        // decrement refcount before release, so erase_safe can trigger on errors
         refs.clear();
         hh.release();
         throw;

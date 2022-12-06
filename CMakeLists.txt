@@ -41,6 +41,14 @@ if (UNIX AND NOT APPLE)
     set(CATCH_ENABLE_COVERAGE ON)
 endif()
 enable_testing()
+
+
+if(MSVC)
+  target_compile_options(tests PRIVATE /W4 /WX)
+else()
+  target_compile_options(tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+
 endif()
 
 
