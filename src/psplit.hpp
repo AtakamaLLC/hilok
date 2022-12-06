@@ -1,6 +1,5 @@
 #include <string_view>
 #include <string>
-#include <assert.h>
 
 class PathSplit {
   
@@ -40,9 +39,8 @@ public:
         return *this;
     }
 
-    bool operator != (const void *ptr) {
+    bool operator != (const void *) {
         // we only support comparison with null
-        assert(!ptr);
         return !m_vw.empty(); 
     }
 
