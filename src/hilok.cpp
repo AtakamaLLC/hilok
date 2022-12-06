@@ -58,7 +58,7 @@ HiHandle HiLok::read(std::string_view path, bool block, double timeout) {
         hh.release();
         throw;
     }
-    return HiHandle(*this, true, refs);
+    return {*this, true, refs};
 }
 
 std::shared_ptr<HiMutex> HiLok::_get_mutex(std::pair<void *, std::string> key) {
@@ -103,7 +103,7 @@ HiHandle HiLok::write(std::string_view path, bool block, double timeout) {
         throw;
     }
 
-    return HiHandle(*this, false, refs);
+    return {*this, false, refs};
 }
 
 
