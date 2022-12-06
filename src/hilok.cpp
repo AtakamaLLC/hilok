@@ -24,6 +24,8 @@ bool shared_lock_with_params(HiMutex &mut, bool block, double timeout) {
 }
 
 void HiHandle::release() {
+    if (m_released) return;
+    m_released = true;
     for (auto it = m_refs.begin(); it!= m_refs.end(); ) {
         auto &kref = *it;
         ++it;
@@ -33,11 +35,11 @@ void HiHandle::release() {
             kref.m_mut->unlock();
         }
 
-        m_mgr.erase_safe(kref);
+        m_mgr->erase_safe(kref);
     }
 }
 
-HiHandle HiLok::read(std::string_view path, bool block, double timeout) {
+HiHandle HiLok::read(std::shared_ptr<HiLok> mgr, std::string_view path, bool block, double timeout) {
     void *cur = nullptr;
     std::pair<void *, std::string> key;
     std::vector<HiKeyRef> refs;
@@ -53,12 +55,12 @@ HiHandle HiLok::read(std::string_view path, bool block, double timeout) {
             cur = (void *) mut.get();
         }
     } catch (...) {
-        auto hh = HiHandle(*this, true, refs);
+        auto hh = HiHandle(mgr, true, refs);
         refs.clear();
         hh.release();
         throw;
     }
-    return {*this, true, refs};
+    return {mgr, true, refs};
 }
 
 std::shared_ptr<HiMutex> HiLok::_get_mutex(std::pair<void *, std::string> key) {
@@ -72,7 +74,7 @@ std::shared_ptr<HiMutex> HiLok::_get_mutex(std::pair<void *, std::string> key) {
 }
 
 
-HiHandle HiLok::write(std::string_view path, bool block, double timeout) {
+HiHandle HiLok::write(std::shared_ptr<HiLok> mgr, std::string_view path, bool block, double timeout) {
     void *cur = nullptr;
     std::pair<void *, std::string> key;
     std::vector<HiKeyRef>refs;
@@ -96,14 +98,14 @@ HiHandle HiLok::write(std::string_view path, bool block, double timeout) {
             cur = (void *) mut.get();
         }
     } catch (...) {
-        auto hh = HiHandle(*this, true, refs);
+        auto hh = HiHandle(mgr, true, refs);
         // decrement refcount before release, so erase_safe can trigger on errors
         refs.clear();
         hh.release();
         throw;
     }
 
-    return {*this, false, refs};
+    return {mgr, false, refs};
 }
 
 

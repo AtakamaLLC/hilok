@@ -52,63 +52,74 @@ TEST_CASE( "path-split-one", "[basic]" ) {
 }
 
 TEST_CASE( "ex-lock-unlock", "[basic]" ) {
-    HiLok h;
-    auto l1 = h.write("a");
+    auto h = std::make_shared<HiLok>();
+    auto l1 = h->write(h, "a");
     l1.release();
     
-    auto l2 = h.write("a", false);
+    auto l2 = h->write(h, "a", false);
     l2.release();
 }
 
 TEST_CASE( "sh-lock-unlock", "[basic]" ) {
-    HiLok h;
-    auto l1 = h.read("a");
+    auto h = std::make_shared<HiLok>();
+    auto l1 = h->read(h, "a");
     l1.release();
     
-    auto l2 = h.read("a");
+    auto l2 = h->read(h, "a");
     l2.release();
 }
 
+TEST_CASE( "ex-riaa", "[basic]" ) {
+    auto h = std::make_shared<HiLok>();
+    {
+        h->write(h, "a");
+    }
+
+    {
+        h->write(h, "a");
+    }
+}
+
 TEST_CASE( "rd-in-wr", "[basic]" ) {
-    HiLok h('/', false);;
-    auto l1 = h.write("a/b/c");
-    REQUIRE_THROWS(h.write("a", false));
-    REQUIRE_THROWS(h.write("a/b", false));
+    auto h = std::make_shared<HiLok>('/', false);
+    auto l1 = h->write(h, "a/b/c");
+    REQUIRE_THROWS(h->write(h, "a", false));
+    REQUIRE_THROWS(h->write(h, "a/b", false));
 
     INFO("read lock while write");
-    auto l2 = h.read("a/b", false);
+    auto l2 = h->read(h, "a/b", false);
     
     INFO("write lock on sibling");
-    auto l3 = h.write("a/b/d", false);
+    auto l3 = h->write(h, "a/b/d", false);
     l1.release();
     
     INFO("write lock root after partial release");
-    REQUIRE_THROWS(h.write("a", false));
+    REQUIRE_THROWS(h->write(h, "a", false));
     
     l3.release();
     INFO("write lock root after partial release");
-    REQUIRE_THROWS(h.write("a", false));
+    REQUIRE_THROWS(h->write(h, "a", false));
     
     l2.release();
 
     INFO("write lock root after all 3 released");
-    h.write("a", false);
+    h->write(h,"a", false);
 }
 
 TEST_CASE( "wr-after-rel", "[basic]" ) {
-    HiLok h('/', false);
-    auto l1 = h.write("a/b/c");
+    auto h = std::make_shared<HiLok>('/', false);
+    auto l1 = h->write(h, "a/b/c");
     l1.release();
 
     INFO("write lock root after full release");
-    auto l4 = h.write("a", false);
+    auto l4 = h->write(h, "a", false);
     
     INFO("read child fails after write root");
-    REQUIRE_THROWS(h.read("a/b", false));
+    REQUIRE_THROWS(h->read(h, "a/b", false));
     l4.release();
 
     INFO("read child ok now");
-    h.read("a/b", false);
+    h->read(h, "a/b", false);
 }
 
 TEST_CASE( "rlock-simple", "[basic]" ) {
@@ -167,16 +178,16 @@ TEST_CASE( "shared-lock-thread", "[basic]" ) {
 }
 
 
-void worker(int, HiLok &h, int &ctr) {
-    auto l1 = h.write("a/b/c/d/e");
-    auto l2 = h.write("a/b/c/d/e");
+void worker(int, std::shared_ptr<HiLok> h, int &ctr) {
+    auto l1 = h->write(h, "a/b/c/d/e");
+    auto l2 = h->write(h, "a/b/c/d/e");
     ctr++;
     l1.release();
     l2.release();
 }
 
 TEST_CASE( "deep-many-threads", "[basic]" ) {
-    HiLok h;
+    auto h = std::make_shared<HiLok>();
     int ctr = 0;
     int pool_size = 200;
     std::vector<std::thread> threads;
@@ -189,20 +200,20 @@ TEST_CASE( "deep-many-threads", "[basic]" ) {
         thread.join();
     }
     CHECK(ctr == pool_size);
-    CHECK(h.size() == 0);
+    CHECK(h->size() == 0);
 }
 
 
-void nesty_worker(int, HiLok &h, int &ctr) {
-    auto l2 = h.read("a/b/c");
-    auto l1 = h.write("a/b/c/d/e");
+void nesty_worker(int, std::shared_ptr<HiLok> h, int &ctr) {
+    auto l2 = h->read(h, "a/b/c");
+    auto l1 = h->write(h, "a/b/c/d/e");
     ctr++;
     l1.release();
     l2.release();
 }
 
 TEST_CASE( "deep-nesty-threads", "[basic]" ) {
-    HiLok h;
+    auto h = std::make_shared<HiLok>();
     int ctr = 0;
     int pool_size = 200;
     std::vector<std::thread> threads;
@@ -215,20 +226,20 @@ TEST_CASE( "deep-nesty-threads", "[basic]" ) {
         thread.join();
     }
     CHECK(ctr == pool_size);
-    CHECK(h.size() == 0);
+    CHECK(h->size() == 0);
 }
 
 
-void randy_worker(int i, HiLok &h, int &ctr) {
+void randy_worker(int i, std::shared_ptr<HiLok> &h, int &ctr) {
     std::array<const char *, 5>paths{"a", "a/b", "a/b/c", "a/b/c/d", "a/b/c/d/e"};
     int depth = (i % 5);
-    auto l1 = h.write(paths[depth]);
+    auto l1 = h->write(h, paths[depth]);
     ctr++;
     l1.release();
 }
 
 TEST_CASE( "randy-threads", "[basic]" ) {
-    HiLok h;
+    auto h = std::make_shared<HiLok>();
     int ctr = 0;
     int pool_size = 100;
     std::vector<std::thread> threads;
@@ -241,6 +252,6 @@ TEST_CASE( "randy-threads", "[basic]" ) {
         thread.join();
     }
     CHECK(ctr == pool_size);
-    CHECK(h.size() == 0);
+    CHECK(h->size() == 0);
 }
 

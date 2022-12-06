@@ -152,13 +152,16 @@ class HiLok;
 class HiHandle {
     bool m_shared;
     std::vector<HiKeyRef> m_refs;
-    HiLok &m_mgr;
+    std::shared_ptr<HiLok> m_mgr;
+    bool m_released;
 
 public:
-    HiHandle(HiLok &mgr, bool shared, std::vector<HiKeyRef> refs) : m_shared(shared), m_refs(refs), m_mgr(mgr) {
+    HiHandle(std::shared_ptr<HiLok> mgr, bool shared, std::vector<HiKeyRef> refs) :
+        m_shared(shared), m_refs(refs), m_mgr(mgr), m_released(false) {
     }
 
     virtual ~HiHandle() {
+        release();
     }
 
     void release();
@@ -188,9 +191,9 @@ public:
     virtual ~HiLok() {
     }
 
-    HiHandle read(std::string_view path, bool block = true, double timeout = 0);
+    HiHandle read(std::shared_ptr<HiLok> mgr, std::string_view path, bool block = true, double timeout = 0);
     
-    HiHandle write(std::string_view path, bool block = true, double timeout = 0);
+    HiHandle write(std::shared_ptr<HiLok> mgr, std::string_view path, bool block = true, double timeout = 0);
 
     void erase_safe(HiKeyRef &ref);
 

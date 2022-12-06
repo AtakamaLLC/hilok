@@ -17,8 +17,10 @@ def test_with_wr():
     with h.write("/a/b"):
         with pytest.raises(HiLokError):
             h.write("/a/b", block=False)
-    with h.write("/a/b", block=False):
+
+    with h.write("/a/b", block=False) as hh:
         pass
+
 
 def test_with_rd():
     h = HiLok(recursive=False)
