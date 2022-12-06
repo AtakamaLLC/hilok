@@ -219,7 +219,7 @@ TEST_CASE( "deep-nesty-threads", "[basic]" ) {
 
 
 void randy_worker(int i, HiLok &h, int &ctr) {
-    std::array<char *i, 5>paths{"a", "a/b", "a/b/c", "a/b/c/d", "a/b/c/d/e"};
+    std::array<const char *, 5>paths{"a", "a/b", "a/b/c", "a/b/c/d", "a/b/c/d/e"};
     int depth = (i % 5);
     auto l1 = h.write(paths[depth]);
     ctr++;
