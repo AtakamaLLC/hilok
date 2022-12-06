@@ -77,6 +77,7 @@ public:
     }
 
     void unlock() {
+        std::lock_guard<std::mutex> guard(m_internal_mut);
         if (!_has_lock()) throw HiErr("invalid unlock");
         if (m_recursive) {
             --m_ex_cnt;

@@ -12,3 +12,9 @@ make requirements
 make ctest
 make pybuild
 make pytest
+
+if [ "$(uname -s)" == "Linux" ]; then
+    make tsantest
+fi
+
+

@@ -27,28 +27,49 @@ conan_cmake_install(PATH_OR_REFERENCE . BUILD missing SETTINGS ${settings})
 
 ############# catch2
 option(ENABLE_TESTS "Enable tests" OFF)
+option(ENABLE_TSAN "Enable tsan" OFF)
+
 if (${ENABLE_TESTS})
+
 find_package(Catch2 3 REQUIRED)
 find_package(Threads REQUIRED)
 add_executable(tests tests/test.cpp src/hilok.cpp)
+
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(tests PRIVATE Threads::Threads)
 target_include_directories(tests PRIVATE src)
+
 include(CTest)
 include(Catch)
 catch_discover_tests(tests)
+
 if (UNIX AND NOT APPLE)
     set(CATCH_ENABLE_COVERAGE ON)
 endif()
+
 enable_testing()
 
 
-if(MSVC)
-  target_compile_options(tests PRIVATE /W4 /WX)
-else()
-  target_compile_options(tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+if (${ENABLE_TSAN})
+  target_compile_options(tests PRIVATE "-fsanitize=thread")
+
+  # Enables dynamic_annotations.h to actually generate code
+  target_compile_definitions(tests  PRIVATE "-DDYNAMIC_ANNOTATIONS_ENABLED")
+
+  # changes atomicops to use the tsan implementations
+  target_compile_definitions(tests  PRIVATE "-DTHREAD_SANITIZER")
+
+  target_compile_definitions(tests  PRIVATE "-D_GLIBCXX_EXTERN_TEMPLATE=0")
+
+  target_link_libraries(tests PRIVATE tsan)
 endif()
 
+endif()
+
+if(MSVC)
+  add_compile_options(/W4 /WX)
+else()
+  add_compile_options(-Wall -Wextra -Wpedantic -Werror)
 endif()
 
 

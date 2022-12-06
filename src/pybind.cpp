@@ -23,7 +23,7 @@ PYBIND11_MODULE(hilok, m)
 
     py::class_<HiHandle>(m, "HiHandle")
         .def("release", &HiHandle::release)
-        .def("__enter__", [](HiHandle &hh) {})
+        .def("__enter__", [](HiHandle &) {})
         .def("__exit__", [](HiHandle &hh, const py::object &, const py::object &, const py::object &) { hh.release(); })
         ;
 

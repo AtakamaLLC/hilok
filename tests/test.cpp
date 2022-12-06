@@ -133,7 +133,7 @@ TEST_CASE( "rlock-thread", "[basic]" ) {
     std::vector<std::thread> threads;
     for(int i = 0; i < pool_size; ++i)
     {
-        threads.emplace_back(std::thread([&] () { rlock_worker(i, mut, ctr); } ));
+        threads.emplace_back(std::thread([&mut, &ctr, i] () { rlock_worker(i, mut, ctr); } ));
     }
 
     for (auto& thread : threads) {
@@ -156,7 +156,7 @@ TEST_CASE( "shared-lock-thread", "[basic]" ) {
     std::vector<std::thread> threads;
     for(int i = 0; i < pool_size; ++i)
     {
-        threads.emplace_back(std::thread([&] () { shared_lock_worker(i, mut); } ));
+        threads.emplace_back(std::thread([&mut, i] () { shared_lock_worker(i, mut); } ));
     }
 
     for (auto& thread : threads) {
@@ -181,7 +181,7 @@ TEST_CASE( "deep-many-threads", "[basic]" ) {
     std::vector<std::thread> threads;
     for(int i = 0; i < pool_size; ++i)
     {
-        threads.emplace_back(std::thread([&] () { worker(i, h, ctr); } ));
+        threads.emplace_back(std::thread([&h, &ctr, i] () { worker(i, h, ctr); } ));
     }
 
     for (auto& thread : threads) {
@@ -207,7 +207,7 @@ TEST_CASE( "deep-nesty-threads", "[basic]" ) {
     std::vector<std::thread> threads;
     for(int i = 0; i < pool_size; ++i)
     {
-        threads.emplace_back(std::thread([&] () { nesty_worker(i, h, ctr); } ));
+        threads.emplace_back(std::thread([&h, &ctr, i] () { nesty_worker(i, h, ctr); } ));
     }
 
     for (auto& thread : threads) {
@@ -233,7 +233,7 @@ TEST_CASE( "randy-threads", "[basic]" ) {
     std::vector<std::thread> threads;
     for(int i = 0; i < pool_size; ++i)
     {
-        threads.emplace_back(std::thread([&] () { randy_worker(i, h, ctr); } ));
+        threads.emplace_back(std::thread([&h, &ctr, i] () { randy_worker(i, h, ctr); } ));
     }
 
     for (auto& thread : threads) {
