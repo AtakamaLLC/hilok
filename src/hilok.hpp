@@ -191,9 +191,9 @@ public:
     virtual ~HiLok() {
     }
 
-    HiHandle read(std::shared_ptr<HiLok> mgr, std::string_view path, bool block = true, double timeout = 0);
+    std::shared_ptr<HiHandle> read(std::shared_ptr<HiLok> mgr, std::string_view path, bool block = true, double timeout = 0);
     
-    HiHandle write(std::shared_ptr<HiLok> mgr, std::string_view path, bool block = true, double timeout = 0);
+    std::shared_ptr<HiHandle> write(std::shared_ptr<HiLok> mgr, std::string_view path, bool block = true, double timeout = 0);
 
     void erase_safe(HiKeyRef &ref);
 

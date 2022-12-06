@@ -22,6 +22,21 @@ def test_with_wr():
         pass
 
 
+def test_early_rel():
+    h = HiLok(recursive=False)
+    with h.write("/a/b") as l:
+        l.release()
+        h.write("/a/b", block=False)
+
+
+def test_riaa():
+    h = HiLok(recursive=False)
+    l = h.write("/a/b")
+    del l
+    l = h.write("/a/b")
+    del l
+
+
 def test_with_rd():
     h = HiLok(recursive=False)
     with h.read("/a/b"):

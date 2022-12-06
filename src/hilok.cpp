@@ -39,7 +39,7 @@ void HiHandle::release() {
     }
 }
 
-HiHandle HiLok::read(std::shared_ptr<HiLok> mgr, std::string_view path, bool block, double timeout) {
+std::shared_ptr<HiHandle> HiLok::read(std::shared_ptr<HiLok> mgr, std::string_view path, bool block, double timeout) {
     void *cur = nullptr;
     std::pair<void *, std::string> key;
     std::vector<HiKeyRef> refs;
@@ -60,7 +60,7 @@ HiHandle HiLok::read(std::shared_ptr<HiLok> mgr, std::string_view path, bool blo
         hh.release();
         throw;
     }
-    return {mgr, true, refs};
+    return std::make_shared<HiHandle>(mgr, true, refs);
 }
 
 std::shared_ptr<HiMutex> HiLok::_get_mutex(std::pair<void *, std::string> key) {
@@ -74,7 +74,7 @@ std::shared_ptr<HiMutex> HiLok::_get_mutex(std::pair<void *, std::string> key) {
 }
 
 
-HiHandle HiLok::write(std::shared_ptr<HiLok> mgr, std::string_view path, bool block, double timeout) {
+std::shared_ptr<HiHandle> HiLok::write(std::shared_ptr<HiLok> mgr, std::string_view path, bool block, double timeout) {
     void *cur = nullptr;
     std::pair<void *, std::string> key;
     std::vector<HiKeyRef>refs;
@@ -105,7 +105,7 @@ HiHandle HiLok::write(std::shared_ptr<HiLok> mgr, std::string_view path, bool bl
         throw;
     }
 
-    return {mgr, false, refs};
+    return std::make_shared<HiHandle>(mgr, false, refs);
 }
 
 

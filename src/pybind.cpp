@@ -21,10 +21,10 @@ PYBIND11_MODULE(hilok, m)
             }, py::arg("path"), py::arg("block") = true, py::arg("timeout") = 0.0)
         ;
 
-    py::class_<HiHandle>(m, "HiHandle")
+    py::class_<HiHandle, std::shared_ptr<HiHandle>>(m, "HiHandle")
         .def("release", &HiHandle::release)
-        .def("__enter__", [](HiHandle &hh) {return hh;})
-        .def("__exit__", [](HiHandle &hh, const py::object &, const py::object &, const py::object &) { hh.release(); })
+        .def("__enter__", [](std::shared_ptr<HiHandle> hh) {return hh;})
+        .def("__exit__", [](std::shared_ptr<HiHandle> hh, const py::object &, const py::object &, const py::object &) { hh->release(); })
         ;
 
     py::register_exception<HiErr>(m, "HiLokError", PyExc_TimeoutError);

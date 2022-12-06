@@ -18,7 +18,7 @@ cbuild:
 
 ctest: cbuild
 	cd cbuild; cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=On
-	cd cbuild; cmake --build .
+	cd cbuild; cmake --build . -j
 	cd cbuild; ctest -V --output-on-failure $(MEMCHECK_FLAGS) .
 
 tsanbuild:
@@ -26,7 +26,7 @@ tsanbuild:
 
 tsantest: tsanbuild
 	cd tsanbuild; cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=On -DENABLE_TSAN=On
-	cd tsanbuild; cmake --build .
+	cd tsanbuild; cmake --build . -j
 	cd tsanbuild; ctest -V --output-on-failure .
 
 pytest:
