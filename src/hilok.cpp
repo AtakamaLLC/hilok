@@ -1,3 +1,5 @@
+#define HILOK_TRACE
+
 #include "hilok.hpp"
 #include "psplit.hpp"
 
@@ -225,11 +227,15 @@ void HiLok::rename(std::string_view path_from, std::string_view path_to, bool bl
 #endif
                 // unlock uncommon ancestors of the source
                 cur_from->m_mut.unsafe_clone_unlock_shared(leaf_from_node->m_mut);
+
+                // could have went to 0
+                erase_unsafe(cur_from);
             
                 from_key = {cur_from, *it_from};
             }
 
-            // keep leaf locks, change nothing but the key
+            // keep leaf locks, change key
+            m_map.erase(leaf_from_node->m_key);
             leaf_from_node->m_key = key;
             m_map[key] = leaf_from_node;        
        } 
@@ -239,8 +245,12 @@ void HiLok::rename(std::string_view path_from, std::string_view path_to, bool bl
 }
 
 
-void HiLok::erase_safe(std::shared_ptr<HiKeyNode> ref) {
+void HiLok::erase_safe(std::shared_ptr<HiKeyNode> &ref) {
     std::lock_guard<std::mutex> guard(m_mutex);
+    erase_unsafe(ref);
+}
+
+void HiLok::erase_unsafe(std::shared_ptr<HiKeyNode> &ref) {
     // lazy speedup, there can be lots of refs (parent->child ref, caller refs, etc.)
     // but if there are too many, we know the exclusive cannot work and is not worth even trying
     if (ref.use_count() <= 6) {

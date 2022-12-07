@@ -122,10 +122,20 @@ TEST_CASE( "wr-after-rel", "[basic]" ) {
     h->read(h, "a/b", false);
 }
 
+void dump_map(HiLok &h) {
+    for (auto &it : h.m_map) {
+        std::cout << it.first.first << "/" << it.first.second << ":" << it.second << std::endl;
+    }
+
+}
+
 TEST_CASE( "rename-lock", "[basic]" ) {
     auto h = std::make_shared<HiLok>('/', false);
     auto l1 = h->write(h, "a/b/c/d");
     h->rename("a/b/c/d", "a/b/r/x", false);
+   
+    dump_map(*h);
+    REQUIRE(h->size() == 4);
 
     // a/b/r now locked
     REQUIRE_THROWS(h->write(h, "a/b/r", false));
@@ -137,7 +147,10 @@ TEST_CASE( "rename-lock", "[basic]" ) {
     l1->release();
 
     // release does the right thing
-    h->write(h, "a/b/r/x", false);
+    l2 = h->write(h, "a/b/r/x", false);
+    l2->release();
+
+    CHECK(h->size() == 0);
 }
 
 
@@ -271,6 +284,36 @@ TEST_CASE( "randy-threads", "[basic]" ) {
         thread.join();
     }
     CHECK(ctr == pool_size);
+    CHECK(h->size() == 0);
+}
+
+void rename_worker(int i, std::shared_ptr<HiLok> &h, std::vector<int> &ctr) {
+    std::array<const char *, 2>paths{"a/x", "a/b"};
+    auto l1 = h->write(h, paths[i%2]);
+    try {
+        h->rename(paths[i%2], paths[(i+1)%2]);
+    } catch (HiErr &) {
+        // some other thread already renamed me... that's ok, ignore it
+    }
+    // i still have a lock
+    ctr[i%2]++;
+    l1->release();
+}
+
+TEST_CASE( "rename-threads", "[basic]" ) {
+    auto h = std::make_shared<HiLok>();
+    int pool_size = 100;
+    std::vector<std::thread> threads;
+    std::vector<int> ctr(2);
+    for(int i = 0; i < pool_size; ++i)
+    {
+        threads.emplace_back(std::thread([&h, &ctr, i] () { rename_worker(i, h, ctr); } ));
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+    CHECK(ctr[0] + ctr[1] == pool_size);
     CHECK(h->size() == 0);
 }
 

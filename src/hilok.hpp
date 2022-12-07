@@ -8,8 +8,6 @@
 #include <thread>
 #include <atomic>
 
-#include <iostream>
-
 class HiErr : public std::runtime_error {
     using std::runtime_error::runtime_error;
 };
@@ -60,7 +58,6 @@ public:
         // lock number of times matching src
         for (auto it = src.m_shared.begin(); it!= src.m_shared.end(); ++ it) {
             for (int i = 0; i < it->second; ++i) {
-                std::cout << "clone lock sh" << std::endl;
                 if (!internal_shared_lock(block, secs)) {
                     return false;
                 }
@@ -68,7 +65,6 @@ public:
             }
         }
         for (int i = 0; i < src.m_ex_cnt; ++i) {
-            std::cout << "clone lock ex" << std::endl;
             if (!internal_shared_lock(block, secs)) {
                 return false;
             }
@@ -81,15 +77,19 @@ public:
         // unlock number of times matching src
         for (auto it = src.m_shared.begin(); it!= src.m_shared.end(); ++ it) {
             for (int i = 0; i < it->second; ++i) {
-                std::cout << "clone unlock sh" << std::endl;
                 m_mut.unlock_shared();
                 m_shared[it->first] -= 1;
+                if (!m_shared[it->first]) {
+                    m_shared.erase(it->first);
+                }
             }
         }
         for (int i = 0; i < src.m_ex_cnt; ++i) {
-            std::cout << "clone unlock ex" << std::endl;
             m_mut.unlock_shared();
-            m_shared[src.m_ex_id] += 1;
+            m_shared[src.m_ex_id] -= 1;
+            if (!m_shared[src.m_ex_id]) {
+                m_shared.erase(src.m_ex_id);
+            }
         }
     }
 
@@ -229,6 +229,7 @@ struct pair_hash
 
 
 class HiLok {
+public:
     std::unordered_map<std::pair<std::shared_ptr<HiKeyNode>, std::string>, std::shared_ptr<HiKeyNode>, pair_hash> m_map;
     std::mutex m_mutex;
     char m_sep;
@@ -251,7 +252,8 @@ public:
 
     void rename(std::string_view from, std::string_view to, bool block = true, double timeout = 0);
 
-    void erase_safe(std::shared_ptr<HiKeyNode> ref);
+    void erase_safe(std::shared_ptr<HiKeyNode> &ref);
+    void erase_unsafe(std::shared_ptr<HiKeyNode> &ref);
 
     size_t size() const { return m_map.size(); };
 };
