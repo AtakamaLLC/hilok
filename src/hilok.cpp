@@ -63,9 +63,9 @@ void HiHandle::release() {
 }
 
 std::shared_ptr<HiHandle> HiLok::read(std::shared_ptr<HiLok> mgr, std::string_view path, bool block, double timeout) {
-    std::pair<std::shared_ptr<HiKeyNode>, std::string> key;
     std::shared_ptr<HiKeyNode> cur;
     try {
+        std::pair<std::shared_ptr<HiKeyNode>, std::string> key;
         for (auto it = PathSplit(path, m_sep); it != it.end(); ++it) {
             key = {cur, *it};
             std::shared_ptr<HiKeyNode> nod = _get_node(key);
@@ -80,6 +80,7 @@ std::shared_ptr<HiHandle> HiLok::read(std::shared_ptr<HiLok> mgr, std::string_vi
         }
     } catch (...) {
         auto hh = HiHandle(mgr, true, cur);
+        cur.reset(); // decrement refcount for erase_safe
         hh.release();
         throw;
     }
@@ -99,8 +100,8 @@ std::shared_ptr<HiKeyNode> HiLok::_get_node(std::pair<std::shared_ptr<HiKeyNode>
 
 std::shared_ptr<HiHandle> HiLok::write(std::shared_ptr<HiLok> mgr, std::string_view path, bool block, double timeout) {
     std::shared_ptr<HiKeyNode> cur;
-    std::pair<std::shared_ptr<HiKeyNode>, std::string> key;
     try {
+        std::pair<std::shared_ptr<HiKeyNode>, std::string> key;
         for (auto it = PathSplit(path, m_sep); it != it.end(); ) {
             key = {cur, *it};
             std::shared_ptr<HiKeyNode> nod = _get_node(key);
@@ -123,7 +124,7 @@ std::shared_ptr<HiHandle> HiLok::write(std::shared_ptr<HiLok> mgr, std::string_v
         }
     } catch (...) {
         auto hh = HiHandle(mgr, true, cur);
-        // decrement refcount before release, so erase_safe can trigger on errors
+        cur.reset(); // decrement refcount for erase_safe
         hh.release();
         throw;
     }
@@ -162,7 +163,6 @@ void HiLok::rename(std::string_view path_from, std::string_view path_to, bool bl
     std::pair<std::shared_ptr<HiKeyNode>, std::string> key;
     
     auto it_from = PathSplit(path_from, m_sep);
-    std::shared_ptr<HiKeyNode> from_cur;
     
     bool common = true;
     auto it_to = PathSplit(path_to, m_sep);
@@ -211,7 +211,9 @@ void HiLok::rename(std::string_view path_from, std::string_view path_to, bool bl
                 throw HiErr("unable to lock rename dest");
             }
         } else {
-             while (it_from != it_from.end()) {
+            cur_to.reset(); // refcount for erase
+
+            while (it_from != it_from.end()) {
                 // uncommon ancestor of source must be released
                 ++it_from;
 
@@ -228,6 +230,7 @@ void HiLok::rename(std::string_view path_from, std::string_view path_to, bool bl
                 // unlock uncommon ancestors of the source
                 cur_from->m_mut.unsafe_clone_unlock_shared(leaf_from_node->m_mut);
 
+                from_key.first.reset(); // refcount for erase
                 // could have went to 0
                 erase_unsafe(cur_from);
             
@@ -253,7 +256,7 @@ void HiLok::erase_safe(std::shared_ptr<HiKeyNode> &ref) {
 void HiLok::erase_unsafe(std::shared_ptr<HiKeyNode> &ref) {
     // lazy speedup, there can be lots of refs (parent->child ref, caller refs, etc.)
     // but if there are too many, we know the exclusive cannot work and is not worth even trying
-    if (ref.use_count() <= 6) {
+    if (ref.use_count() <= 5) {
         // maybe no one else is using it?
         if (ref->m_mut.try_lock()) {
             // we now have an exclusive lock, so we really know nobody is using it

@@ -211,6 +211,38 @@ TEST_CASE( "shared-lock-thread", "[basic]" ) {
 }
 
 
+void nest_lock_worker(int &ctr, HiMutex &h1, HiMutex &h2) {
+    // simulates the kind of locking that can happen in a nested set of locks, with reentrance
+    h1.lock_shared();
+    h2.lock();
+    h1.lock_shared();
+    h2.lock();
+    ++ctr;
+    h1.unlock_shared();
+    h2.unlock();
+    h1.unlock_shared();
+    h2.unlock();
+}
+
+TEST_CASE( "simulate-nest", "[basic]" ) {
+    HiMutex mut1(true);
+    HiMutex mut2(true);
+    int ctr = 0;
+    int pool_size = 100;
+    std::vector<std::thread> threads;
+    for(int i = 0; i < pool_size; ++i)
+    {
+        threads.emplace_back(std::thread([&mut1, &mut2, &ctr] () { nest_lock_worker(ctr, mut1, mut2); } ));
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+    CHECK(mut1.is_locked() == false);
+    CHECK(mut2.is_locked() == false);
+    CHECK(ctr == pool_size);
+}
+
 void worker(int, std::shared_ptr<HiLok> h, int &ctr) {
     auto l1 = h->write(h, "a/b/c/d/e");
     auto l2 = h->write(h, "a/b/c/d/e");
