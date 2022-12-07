@@ -122,6 +122,25 @@ TEST_CASE( "wr-after-rel", "[basic]" ) {
     h->read(h, "a/b", false);
 }
 
+TEST_CASE( "rename-lock", "[basic]" ) {
+    auto h = std::make_shared<HiLok>('/', false);
+    auto l1 = h->write(h, "a/b/c/d");
+    h->rename("a/b/c/d", "a/b/r/x", false);
+
+    // a/b/r now locked
+    REQUIRE_THROWS(h->write(h, "a/b/r", false));
+
+    // a/b/c not locked anymore
+    auto l2 = h->write(h, "a/b/c", false);
+    l2->release();
+
+    l1->release();
+
+    // release does the right thing
+    h->write(h, "a/b/r/x", false);
+}
+
+
 TEST_CASE( "rlock-simple", "[basic]" ) {
     HiMutex h(true);
     h.lock();
