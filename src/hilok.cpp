@@ -1,4 +1,4 @@
-#define HILOK_TRACE
+// #define HILOK_TRACE
 
 #include "hilok.hpp"
 #include "psplit.hpp"

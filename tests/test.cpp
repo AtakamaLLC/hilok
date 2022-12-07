@@ -4,6 +4,7 @@
 #include <psplit.hpp>
 
 #include <thread>
+#include <iostream>
 #include <array>
 
 TEST_CASE( "path-split-basic", "[basic]" ) {

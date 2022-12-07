@@ -102,6 +102,7 @@ public:
     }
 
     void _start_lock() {
+        std::lock_guard<std::mutex> guard(m_internal_mut);
         m_ex_id = std::this_thread::get_id();
         m_ex_cnt = 1;
     }
