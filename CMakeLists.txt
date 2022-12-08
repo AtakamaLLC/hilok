@@ -44,10 +44,6 @@ include(CTest)
 include(Catch)
 catch_discover_tests(tests)
 
-if (UNIX AND NOT APPLE)
-    set(CATCH_ENABLE_COVERAGE ON)
-endif()
-
 enable_testing()
 
 
