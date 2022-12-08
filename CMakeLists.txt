@@ -33,7 +33,7 @@ if (${ENABLE_TESTS})
 
 find_package(Catch2 3 REQUIRED)
 find_package(Threads REQUIRED)
-add_executable(tests tests/test.cpp src/hilok.cpp)
+add_executable(tests tests/test.cpp src/hilok.cpp src/recsh.cpp)
 
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(tests PRIVATE Threads::Threads)
@@ -76,7 +76,7 @@ endif()
 ############# pybind11
 find_package(pybind11 REQUIRED)
 
-pybind11_add_module(hilok src/pybind.cpp src/hilok.cpp)
+pybind11_add_module(hilok src/pybind.cpp src/hilok.cpp src/recsh.cpp)
 
 target_link_libraries(hilok PRIVATE pybind11::headers)
 

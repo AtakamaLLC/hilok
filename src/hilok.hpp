@@ -1,194 +1,142 @@
 #include <memory>
 #include <string>
 #include <string_view>
-#include <shared_mutex>
 #include <unordered_map>
 #include <map>
 #include <vector>
 #include <thread>
 #include <atomic>
+#include <shared_mutex>
+
+#include "recsh.hpp"
 
 class HiErr : public std::runtime_error {
     using std::runtime_error::runtime_error;
 };
 
+#define mut_op(op) (m_recursive ? m_r_mut.op() : m_t_mut.op())
+#define mut_op_1(op, a) (m_recursive ? m_r_mut.op(a) : m_t_mut.op(a))
 
 class HiMutex {
-    
+private: 
+    recursive_shared_mutex m_r_mut;
+    std::shared_timed_mutex m_t_mut;
 public:
     std::thread::id m_ex_id;
-    int m_ex_cnt;
-    std::map<std::thread::id, int> m_shared;
-    std::shared_timed_mutex m_mut;
-    std::mutex m_internal_mut;
+    std::mutex  m_num_mut;
+    std::atomic<int> m_num_r;
     bool m_recursive;
+    bool m_is_ex;
 
-    HiMutex(bool recursive) : m_ex_cnt(0), m_recursive(recursive) {
+    HiMutex(bool recursive) : m_num_r(0), m_recursive(recursive) {
     }
 
-    bool _has_lock() {
-        return m_ex_cnt > 0 && m_ex_id == std::this_thread::get_id();
+    bool is_locked() {
+        std::lock_guard<std::mutex> guard(m_num_mut);
+        return m_num_r || m_is_ex;
     }
 
-    bool _do_lock() {
-        if (!m_recursive)
-            return false;
-        std::lock_guard<std::mutex> guard(m_internal_mut);
-        if (_has_lock()) {
-            ++m_ex_cnt;
-            return true;
-        }
-        return false;
-    }
-
-    bool internal_shared_lock(bool block, double secs) {
-        bool ret;
-        if (!block) {
-            ret = m_mut.try_lock_shared();
-        } else if (secs != 0.0) {
-            ret = m_mut.try_lock_shared_for(std::chrono::duration<double>(secs));
-        } else {
-            m_mut.lock_shared();
-            ret = true;
-        }
-        return ret;
-    }
- 
     bool unsafe_clone_lock_shared(HiMutex &src, bool block, double secs) {
-        // lock number of times matching src
-        for (auto it = src.m_shared.begin(); it!= src.m_shared.end(); ++ it) {
-            for (int i = 0; i < it->second; ++i) {
-                if (!internal_shared_lock(block, secs)) {
-                    return false;
-                }
-                m_shared[it->first] += 1;
-            }
-        }
-        for (int i = 0; i < src.m_ex_cnt; ++i) {
-            if (!internal_shared_lock(block, secs)) {
+        auto num = (src.m_num_r + (src.m_is_ex ? 1 : 0));
+        while (m_num_r < num) {
+            if (!lock_shared(block, secs)) {
                 return false;
             }
-            m_shared[src.m_ex_id] += 1;
         }
         return true;
     }
 
     void unsafe_clone_unlock_shared(HiMutex &src) {
-        // unlock number of times matching src
-        for (auto it = src.m_shared.begin(); it!= src.m_shared.end(); ++ it) {
-            for (int i = 0; i < it->second; ++i) {
-                m_mut.unlock_shared();
-                m_shared[it->first] -= 1;
-                if (!m_shared[it->first]) {
-                    m_shared.erase(it->first);
-                }
-            }
-        }
-        for (int i = 0; i < src.m_ex_cnt; ++i) {
-            m_mut.unlock_shared();
-            m_shared[src.m_ex_id] -= 1;
-            if (!m_shared[src.m_ex_id]) {
-                m_shared.erase(src.m_ex_id);
-            }
+        auto num = (src.m_num_r + (src.m_is_ex ? 1 : 0));
+        while (num > 0) {
+            unlock_shared();
+            --num;
         }
     }
 
+    bool internal_lock(bool block, double secs) {
+        bool ret;
+        if (!block) {
+            ret = mut_op(try_lock);
+        } else if (secs != 0.0) {
+            ret = mut_op_1(try_lock_for, std::chrono::duration<double>(secs));
+        } else {
+            mut_op(lock);
+            ret = true;
+        }
+        return ret;
+    }
+ 
+    bool lock(bool block, double secs) {
+        bool ret = internal_lock(block, secs);
+        if (ret)
+            m_is_ex = true;
+        return ret;
+    }
+ 
     void lock() {
-        if (_do_lock()) {
-            return;
-        }
-        m_mut.lock();
-        _start_lock();
-    }
-
-    void _start_lock() {
-        std::lock_guard<std::mutex> guard(m_internal_mut);
-        m_ex_id = std::this_thread::get_id();
-        m_ex_cnt = 1;
+        mut_op(lock);
+        m_is_ex = true;
     }
 
     bool try_lock() {
-        if (_do_lock()) {
-            return true;
-        }
-        if (m_mut.try_lock()) {
-            _start_lock();
+        if (mut_op(try_lock)) {
+            m_is_ex = true;
             return true;
         }
         return false;
     }
 
     bool try_lock_for(double secs) {
-        if (_do_lock()) {
-            return true;
-        }
-        if (m_mut.try_lock_for(std::chrono::duration<double>(secs))) {
-            _start_lock();
+        if (mut_op_1(try_lock_for, std::chrono::duration<double>(secs))) {
+            m_is_ex = true;
             return true;
         }
         return false;
     }
 
     void unlock() {
-        std::lock_guard<std::mutex> guard(m_internal_mut);
-        if (!_has_lock()) throw HiErr("invalid unlock");
-        if (m_recursive) {
-            --m_ex_cnt;
-            if (m_ex_cnt == 0) {
-                m_mut.unlock();
-            }
-        } else {
-            m_mut.unlock();
-        }
+        m_is_ex = false;
+        mut_op(unlock);
     }
     
-    bool is_locked() {
-        return m_ex_cnt > 0 || m_shared.size();
-    }
-
-
-    bool _has_lock_shared() {
-        return m_shared[std::this_thread::get_id()] > 0;
-    }
-
     void lock_shared() {
-        m_mut.lock_shared();
-        _add_lock_shared();
+        mut_op(lock_shared);
+        ++m_num_r;
     }
 
-    void _add_lock_shared() {
-        std::lock_guard<std::mutex> guard(m_internal_mut);
-        m_shared[std::this_thread::get_id()] += 1;
-    }
-
-    bool try_lock_shared() {
-        if (m_mut.try_lock_shared()) {
-            _add_lock_shared();
-            return true;
+    bool lock_shared(bool block, double secs) {
+        bool ret;
+        if (!block) {
+            ret = mut_op(try_lock_shared);
+        } else if (secs != 0.0) {
+            ret = mut_op_1(try_lock_shared_for, std::chrono::duration<double>(secs));
+        } else {
+            mut_op(lock_shared);
+            ret = true;
         }
-        return false;
+        if (ret)
+            ++m_num_r;
+        return ret;
+    }
+ 
+    bool try_lock_shared() {
+        auto ret = mut_op(try_lock_shared);
+        if (ret)
+            ++m_num_r;
+        return ret;
     }
 
     bool try_lock_shared_for(double secs) {
-        if (m_mut.try_lock_shared_for(std::chrono::duration<double>(secs))) {
-            _add_lock_shared();
-            return true;
-        }
-        return false;
+        auto ret = mut_op_1(try_lock_shared_for, std::chrono::duration<double>(secs));
+        if (ret)
+            ++m_num_r;
+        return ret;
     }
 
     void unlock_shared() {
-        std::lock_guard<std::mutex> guard(m_internal_mut);
-
-        if (!_has_lock_shared()) throw HiErr("invalid shared unlock");
-
-        --m_shared[std::this_thread::get_id()];
-
-        if (!m_shared[std::this_thread::get_id()]) {
-            m_shared.erase(std::this_thread::get_id());
-        }
-
-        m_mut.unlock_shared();
+        --m_num_r;
+        mut_op(unlock_shared);
     }
 };
 

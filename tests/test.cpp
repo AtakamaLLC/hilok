@@ -188,6 +188,13 @@ TEST_CASE( "rlock-thread", "[basic]" ) {
     CHECK(mut.is_locked() == false);
 }
 
+TEST_CASE( "shared-simple", "[basic]" ) {
+    HiMutex h(true);
+    h.lock_shared();
+    h.unlock_shared();
+    CHECK(!h.is_locked());
+}
+
 void shared_lock_worker(int, HiMutex &h) {
     h.lock_shared();
     h.lock_shared();
@@ -214,14 +221,8 @@ TEST_CASE( "shared-lock-thread", "[basic]" ) {
 void nest_lock_worker(int &ctr, HiMutex &h1, HiMutex &h2) {
     // simulates the kind of locking that can happen in a nested set of locks, with reentrance
     h1.lock_shared();
-    h2.lock();
-    h1.lock_shared();
-    h2.lock();
     ++ctr;
     h1.unlock_shared();
-    h2.unlock();
-    h1.unlock_shared();
-    h2.unlock();
 }
 
 TEST_CASE( "simulate-nest", "[basic]" ) {
