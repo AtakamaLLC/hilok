@@ -41,6 +41,58 @@ public:
         return false;
     }
 
+    bool internal_shared_lock(bool block, double secs) {
+        bool ret;
+        if (!block) {
+            ret = m_mut.try_lock_shared();
+        } else if (secs != 0.0) {
+            ret = m_mut.try_lock_shared_for(std::chrono::duration<double>(secs));
+        } else {
+            m_mut.lock_shared();
+            ret = true;
+        }
+        return ret;
+    }
+ 
+    bool unsafe_clone_lock_shared(HiMutex &src, bool block, double secs) {
+        // lock number of times matching src
+        for (auto it = src.m_shared.begin(); it!= src.m_shared.end(); ++ it) {
+            for (int i = 0; i < it->second; ++i) {
+                if (!internal_shared_lock(block, secs)) {
+                    return false;
+                }
+                m_shared[it->first] += 1;
+            }
+        }
+        for (int i = 0; i < src.m_ex_cnt; ++i) {
+            if (!internal_shared_lock(block, secs)) {
+                return false;
+            }
+            m_shared[src.m_ex_id] += 1;
+        }
+        return true;
+    }
+
+    void unsafe_clone_unlock_shared(HiMutex &src) {
+        // unlock number of times matching src
+        for (auto it = src.m_shared.begin(); it!= src.m_shared.end(); ++ it) {
+            for (int i = 0; i < it->second; ++i) {
+                m_mut.unlock_shared();
+                m_shared[it->first] -= 1;
+                if (!m_shared[it->first]) {
+                    m_shared.erase(it->first);
+                }
+            }
+        }
+        for (int i = 0; i < src.m_ex_cnt; ++i) {
+            m_mut.unlock_shared();
+            m_shared[src.m_ex_id] -= 1;
+            if (!m_shared[src.m_ex_id]) {
+                m_shared.erase(src.m_ex_id);
+            }
+        }
+    }
+
     void lock() {
         if (_do_lock()) {
             return;
@@ -50,6 +102,7 @@ public:
     }
 
     void _start_lock() {
+        std::lock_guard<std::mutex> guard(m_internal_mut);
         m_ex_id = std::this_thread::get_id();
         m_ex_cnt = 1;
     }
@@ -139,11 +192,11 @@ public:
     }
 };
 
-class HiKeyRef {
+class HiKeyNode {
 public:
-    std::shared_ptr<HiMutex> m_mut;
-    std::pair<void *, std::string> m_key;
-    HiKeyRef(std::shared_ptr<HiMutex> mut, std::pair<void *, std::string> key) : m_mut(mut), m_key(key) {
+    std::pair<std::shared_ptr<HiKeyNode>, std::string> m_key;
+    HiMutex m_mut;
+    HiKeyNode(std::pair<std::shared_ptr<HiKeyNode>, std::string> key, bool recursive) : m_key(key), m_mut(recursive) {
     }
 };
 
@@ -151,13 +204,13 @@ class HiLok;
 
 class HiHandle {
     bool m_shared;
-    std::vector<HiKeyRef> m_refs;
+    std::shared_ptr<HiKeyNode> m_ref;
     std::shared_ptr<HiLok> m_mgr;
     bool m_released;
 
 public:
-    HiHandle(std::shared_ptr<HiLok> mgr, bool shared, std::vector<HiKeyRef> refs) :
-        m_shared(shared), m_refs(refs), m_mgr(mgr), m_released(false) {
+    HiHandle(std::shared_ptr<HiLok> mgr, bool shared, std::shared_ptr<HiKeyNode> ref) :
+        m_shared(shared), m_ref(ref), m_mgr(mgr), m_released(false) {
     }
 
     virtual ~HiHandle() {
@@ -177,11 +230,12 @@ struct pair_hash
 
 
 class HiLok {
-    std::unordered_map<std::pair<void *, std::string>, std::shared_ptr<HiMutex>, pair_hash> m_map;
+public:
+    std::unordered_map<std::pair<std::shared_ptr<HiKeyNode>, std::string>, std::shared_ptr<HiKeyNode>, pair_hash> m_map;
     std::mutex m_mutex;
     char m_sep;
     bool m_recursive;
-    std::shared_ptr<HiMutex> _get_mutex(std::pair<void *, std::string> key);
+    std::shared_ptr<HiKeyNode> _get_node(std::pair<std::shared_ptr<HiKeyNode>, std::string> key);
 
 public:
 
@@ -191,11 +245,16 @@ public:
     virtual ~HiLok() {
     }
 
+    std::shared_ptr<HiKeyNode> find_node(std::string_view path_from);
+
     std::shared_ptr<HiHandle> read(std::shared_ptr<HiLok> mgr, std::string_view path, bool block = true, double timeout = 0);
     
     std::shared_ptr<HiHandle> write(std::shared_ptr<HiLok> mgr, std::string_view path, bool block = true, double timeout = 0);
 
-    void erase_safe(HiKeyRef &ref);
+    void rename(std::string_view from, std::string_view to, bool block = true, double timeout = 0);
+
+    void erase_safe(std::shared_ptr<HiKeyNode> &ref);
+    void erase_unsafe(std::shared_ptr<HiKeyNode> &ref);
 
     size_t size() const { return m_map.size(); };
 };
