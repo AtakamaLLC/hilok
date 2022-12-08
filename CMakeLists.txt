@@ -28,6 +28,7 @@ conan_cmake_install(PATH_OR_REFERENCE . BUILD missing SETTINGS ${settings})
 ############# catch2
 option(ENABLE_TESTS "Enable tests" OFF)
 option(ENABLE_TSAN "Enable tsan" OFF)
+option(ENABLE_COVERAGE "Enable coverage" OFF)
 
 if (${ENABLE_TESTS})
 
@@ -62,6 +63,15 @@ if (${ENABLE_TSAN})
   target_compile_definitions(tests  PRIVATE "-D_GLIBCXX_EXTERN_TEMPLATE=0")
 
   target_link_libraries(tests PRIVATE tsan)
+endif()
+
+
+if (${ENABLE_COVERAGE})
+    set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/externals/CMake-codecov/cmake" ${CMAKE_MODULE_PATH})
+    find_package(codecov)
+    add_coverage(tests)
+    list(APPEND LCOV_REMOVE_PATTERNS "'/usr/*'")
+    coverage_evaluate()
 endif()
 
 endif()

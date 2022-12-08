@@ -1,6 +1,7 @@
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
 	MEMCHECK_FLAGS += -T memcheck
+	CODECOV_FLAGS += -DENABLE_COVERAGE=On
 endif
 
 venv:
@@ -17,7 +18,7 @@ cbuild:
 	mkdir cbuild
 
 ctest: cbuild
-	cd cbuild; cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=On
+	cd cbuild; cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=On $(CODECOV_FLAGS)
 	cd cbuild; cmake --build . -j
 	cd cbuild; ctest -V --output-on-failure $(MEMCHECK_FLAGS) .
 
