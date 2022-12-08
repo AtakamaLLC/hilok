@@ -43,11 +43,10 @@ void HiHandle::release() {
         refs.push_back(cur);
         cur = cur->m_key.first;
     }
-    std::reverse(refs.begin(),refs.end());
-    for (auto it = refs.begin(); it!= refs.end(); ) {
+    for (auto it = refs.rbegin(); it!= refs.rend(); ) {
         auto &kref = *it;
         ++it;
-        if (m_shared || it != refs.end()) {
+        if (m_shared || it != refs.rend()) {
 #ifdef HILOK_TRACE
             std::cout << "un: " << kref << " " << 0 << " " << m_shared << std::endl;
 #endif
@@ -63,7 +62,7 @@ void HiHandle::release() {
 }
 
 std::shared_ptr<HiHandle> HiLok::read(std::shared_ptr<HiLok> mgr, std::string_view path, bool block, double timeout) {
-    std::shared_ptr<HiKeyNode> cur;
+    std::shared_ptr<HiKeyNode> cur;   // root is an empty ptr
     try {
         std::pair<std::shared_ptr<HiKeyNode>, std::string> key;
         for (auto it = PathSplit(path, m_sep); it != it.end(); ++it) {
