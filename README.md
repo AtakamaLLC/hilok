@@ -1,5 +1,13 @@
 = Hierarchical locks
 
+Allows the caller to lock a "directory", or an individual file.
+
+Locks are, by default, shared, recursive & timed.
+
+First optional argument to the lock manager is the "sep".
+
+Second optional argument is "recursive" (default true).
+
 ```
 from hilok import HiLok
 
@@ -23,4 +31,5 @@ rd = h.read("/some/path", block=False)
 # with syntax is fine:
 with h.read("/some/path"):
     pass
+
 ```

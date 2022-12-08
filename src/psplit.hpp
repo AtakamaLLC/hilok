@@ -5,7 +5,7 @@ class PathSplit {
   
     std::string_view m_vw;
     char m_sep;
-    int next;
+    size_t next;
 
 
 public:
@@ -39,7 +39,8 @@ public:
         return *this;
     }
 
-    bool operator != (const void *ptr) {
+    bool operator != (const void *) {
+        // we only support comparison with null
         return !m_vw.empty(); 
     }
 

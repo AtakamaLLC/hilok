@@ -1,6 +1,6 @@
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
-    CTESTFLAGS += -T memcheck
+	MEMCHECK_FLAGS += -T memcheck
 endif
 
 venv:
@@ -18,8 +18,16 @@ cbuild:
 
 ctest: cbuild
 	cd cbuild; cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=On
-	cd cbuild; cmake --build .
-	cd cbuild; ctest -V --output-on-failure $(CTESTFLAGS) .
+	cd cbuild; cmake --build . -j
+	cd cbuild; ctest -V --output-on-failure $(MEMCHECK_FLAGS) .
+
+tsanbuild:
+	mkdir tsanbuild
+
+tsantest: tsanbuild
+	cd tsanbuild; cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=On -DENABLE_TSAN=On
+	cd tsanbuild; cmake --build . -j
+	cd tsanbuild; ctest -V --output-on-failure .
 
 pytest:
 	pytest tests
