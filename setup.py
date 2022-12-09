@@ -29,7 +29,7 @@ class CMakeExtension(Extension):
 
 
 class CMakeBuild(build_ext):
-    user_options = build_ext.build_ext.user_options + [('require-tag', None, 'Require a git tag')]
+    user_options = build_ext.user_options + [('require-tag', None, 'Require a git tag')]
 
     def build_extension(self, ext: CMakeExtension) -> None:
         # Must be in this form due to bug in .resolve() only fixed in Python 3.10+
@@ -143,7 +143,7 @@ def get_git_version():
     try:
         return (
             subprocess.run(
-                "git describe --tags --match 'v*'",
+                "git describe --tags -exact --match 'v*'",
                 shell=True,
                 check=True,
                 capture_output=True,
@@ -153,8 +153,11 @@ def get_git_version():
             .lstrip("v")
         )
     except subprocess.CalledProcessError as ex:
-        print("no tag: %s", ex.stderr)
-        return "0.0.1"
+        if "--require-tag" in sys.argv:
+            raise
+        else:
+            print("no tag: %s", ex.stderr)
+            return "0.0.1"
 
 
 # The information here can also be placed in setup.cfg - better separation of
