@@ -19,7 +19,7 @@ jobs:
       with:
         python-versions: 'cp39-cp39 cp310-cp310'
         system-packages: 'llvm clang cmake'
-        pre-build-command: 'python3 -mpip install conan'
+        pre-build-command: 'python -mpip install conan'
     - uses: pypa/gh-action-pypi-publish@release/v1
       with:
         skip_existing: true
