@@ -86,7 +86,7 @@ std::shared_ptr<HiHandle> HiLok::read(std::shared_ptr<HiLok> mgr, std::string_vi
     return std::make_shared<HiHandle>(mgr, true, cur);
 }
 
-std::shared_ptr<HiKeyNode> HiLok::_get_node(std::pair<std::shared_ptr<HiKeyNode>, std::string> key) {
+std::shared_ptr<HiKeyNode> HiLok::_get_node(const std::pair<std::shared_ptr<HiKeyNode>, std::string> &key) {
     std::lock_guard<std::mutex> guard(m_mutex);
     auto it = m_map.find(key);
     if (it == m_map.end()) {

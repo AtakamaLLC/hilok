@@ -12,7 +12,7 @@ PYBIND11_MODULE(hilok, m)
         .def(py::init<char>(), py::arg("sep") = '/')
         .def(py::init<char, bool>(), py::arg("sep") = '/', py::arg("recursive") = true)
         .def("write", [](std::shared_ptr<HiLok> lok, std::string_view path, std::optional<bool> block, std::optional<double> timeout) {
-                py::gil_scoped_release();
+                py::gil_scoped_release _gil_rel;
                 if (!block.has_value())
                     block = true;
                 if (!timeout.has_value())
@@ -20,7 +20,7 @@ PYBIND11_MODULE(hilok, m)
                 return lok->write(lok, path, block.value(), timeout.value());
             }, py::arg("path"), py::arg("block") = true, py::arg("timeout") = 0.0)
         .def("read", [](std::shared_ptr<HiLok> lok, std::string_view path, std::optional<bool> block, std::optional<double> timeout) {
-                py::gil_scoped_release();
+                py::gil_scoped_release _gil_rel;
                 if (!block.has_value())
                     block = true;
                 if (!timeout.has_value())

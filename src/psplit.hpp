@@ -46,8 +46,9 @@ public:
         return *this;
     }
 
-    bool operator != (const void *) {
+    bool operator != (const void *ptr) {
         // we only support comparison with null
+        if (ptr) throw std::logic_error("only for comparing with null");
         return !m_vw.empty(); 
     }
 

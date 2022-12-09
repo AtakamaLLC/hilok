@@ -57,12 +57,12 @@ public:
  
     bool unsafe_clone_lock_shared(HiMutex &src, bool block, double secs) {
         // lock number of times matching src
-        for (auto it = src.m_shared.begin(); it!= src.m_shared.end(); ++ it) {
-            for (int i = 0; i < it->second; ++i) {
+        for (const auto &[key, cnt] : src.m_shared) {
+            for (int i = 0; i < cnt; ++i) {
                 if (!internal_shared_lock(block, secs)) {
                     return false;
                 }
-                m_shared[it->first] += 1;
+                m_shared[key] += 1;
             }
         }
         for (int i = 0; i < src.m_ex_cnt; ++i) {
@@ -76,12 +76,12 @@ public:
 
     void unsafe_clone_unlock_shared(HiMutex &src) {
         // unlock number of times matching src
-        for (auto it = src.m_shared.begin(); it!= src.m_shared.end(); ++ it) {
-            for (int i = 0; i < it->second; ++i) {
+        for (const auto &[key, cnt] : src.m_shared) {
+            for (int i = 0; i < cnt; ++i) {
                 m_mut.unlock_shared();
-                m_shared[it->first] -= 1;
-                if (!m_shared[it->first]) {
-                    m_shared.erase(it->first);
+                m_shared[key] -= 1;
+                if (!m_shared[key]) {
+                    m_shared.erase(key);
                 }
             }
         }
@@ -149,7 +149,8 @@ public:
 
 
     bool _has_lock_shared() {
-        return m_shared[std::this_thread::get_id()] > 0;
+        auto it = m_shared.find(std::this_thread::get_id());
+        return it != m_shared.end() && it->second > 0;
     }
 
     void lock_shared() {
@@ -213,6 +214,10 @@ public:
     HiHandle(std::shared_ptr<HiLok> mgr, bool shared, std::shared_ptr<HiKeyNode> ref) :
         m_shared(shared), m_ref(ref), m_mgr(mgr), m_released(false) {
     }
+    HiHandle ( HiHandle && ) = default;
+    HiHandle &  operator= ( HiHandle && ) = default;
+    HiHandle ( const HiHandle & ) = delete;
+    HiHandle & operator= ( const HiHandle & ) = delete;
 
     virtual ~HiHandle() {
         release();
@@ -236,7 +241,8 @@ public:
     std::mutex m_mutex;
     char m_sep;
     bool m_recursive;
-    std::shared_ptr<HiKeyNode> _get_node(std::pair<std::shared_ptr<HiKeyNode>, std::string> key);
+    std::shared_ptr<HiKeyNode> _get_node(const std::pair<std::shared_ptr<HiKeyNode>, std::string> &key);
+
 
 public:
 
