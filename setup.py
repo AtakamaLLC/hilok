@@ -135,6 +135,9 @@ def long_description():
 
 
 def get_git_version():
+    if re.match(r"^v[\d\.]+", os.environ.get("GITHUB_REF_NAME","")):
+        return os.environ["GITHUB_REF_NAME"]
+
     try:
         return (
             subprocess.run(
