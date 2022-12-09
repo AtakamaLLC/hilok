@@ -29,6 +29,8 @@ class CMakeExtension(Extension):
 
 
 class CMakeBuild(build_ext):
+    user_options = build_ext.build_ext.user_options + [('require-tag', None, 'Require a git tag')]
+
     def build_extension(self, ext: CMakeExtension) -> None:
         # Must be in this form due to bug in .resolve() only fixed in Python 3.10+
         ext_fullpath = Path.cwd() / self.get_ext_fullpath(ext.name)  # type: ignore[no-untyped-call]
@@ -50,6 +52,7 @@ class CMakeBuild(build_ext):
         cmake_args = [
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
+            f'-DVERSION_INFO="{self.distribution.get_version()}"',
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
         ]
         build_args = []
@@ -140,7 +143,7 @@ def get_git_version():
     try:
         return (
             subprocess.run(
-                "git describe --tags --first-parent --exact-match --match 'v*'",
+                "git describe --tags --match 'v*'",
                 shell=True,
                 check=True,
                 capture_output=True,
@@ -149,7 +152,8 @@ def get_git_version():
             .stdout.rstrip()
             .lstrip("v")
         )
-    except Exception:
+    except subprocess.CalledProcessError as ex:
+        print("no tag: %s", ex.stderr)
         return "0.0.1"
 
 
