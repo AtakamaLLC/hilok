@@ -31,8 +31,10 @@ jobs:
         python -m pip install --upgrade pip twine
         make requirements
     - name: Build
+      env:
+        SETUP_REQUIRE_TAG: 1
       run: |
-        SETUP_REQUIRE_TAG=1 python setup.py bdist_wheel
+        python setup.py bdist_wheel
     - name: Publish wheels to PyPI
       env:
         TWINE_USERNAME: __token__

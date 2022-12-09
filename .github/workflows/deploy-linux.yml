@@ -19,9 +19,10 @@ jobs:
       with:
         python-versions: 'cp39-cp39 cp310-cp310'
         system-packages: 'llvm clang cmake python3 python3-pip llvm-toolset-7-clang-tools-extra'
-        pre-build-command: 'python3 -mpip install conan'
-    - uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        skip_existing: true
-        password: ${{ secrets.PYPI_API_TOKEN }}
-
+        pre-build-command: 'python3 -mpip install conan twine'
+    - name: Publish wheels to PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run: |
+        twine upload dist/*manylinux*
