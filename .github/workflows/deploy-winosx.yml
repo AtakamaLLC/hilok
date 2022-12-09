@@ -1,4 +1,4 @@
-name: pytest
+name: deploy-winosx
 
 on:
   push:
