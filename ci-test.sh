@@ -2,8 +2,20 @@
 
 set -o errexit
 
-python3 -m virtualenv env
-. ./env/bin/activate || . ./env/Scripts/activate
+if [ "$(uname -s)" == "Linux" ]; then
+    sudo apt install -y valgrind
+fi
+
+make venv
+. ./venv/bin/activate || . ./venv/Scripts/activate
 make requirements
-make lint
-make test
+make ctest
+make pybuild
+make pytest
+
+if [ "$(uname -s)" == "Linux" ]; then
+    make tsantest
+    make covtest
+fi
+
+

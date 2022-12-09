@@ -50,6 +50,7 @@ class CMakeBuild(build_ext):
         cmake_args = [
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
+            f'-DVERSION_INFO="{self.distribution.get_version()}"',
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
         ]
         build_args = []
@@ -57,9 +58,6 @@ class CMakeBuild(build_ext):
         # (needed e.g. to build for ARM OSx on conda-forge)
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
-
-        # In this example, we pass in the version to C++. You might not need to.
-        cmake_args += [f"-DEXAMPLE_VERSION_INFO={self.distribution.get_version()}"]  # type: ignore[attr-defined]
 
         if self.compiler.compiler_type != "msvc":
             # Using Ninja-build since it a) is available as a wheel and b)
@@ -136,18 +134,42 @@ def long_description():
         return contents
 
 
+def get_git_version():
+    try:
+        return (
+            subprocess.run(
+                "git describe --tags --exact --match \"v*\"",
+                shell=True,
+                check=True,
+                capture_output=True,
+                encoding="utf8",
+            )
+            .stdout.rstrip()
+            .lstrip("v")
+        )
+    except subprocess.CalledProcessError as ex:
+        print("no tag: ", ex.stderr)
+        if os.environ.get("SETUP_REQUIRE_TAG"):
+            raise
+        else:
+            return "0.0.1"
+
+
 # The information here can also be placed in setup.cfg - better separation of
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
     name="hilok",
-    version="0.0.1",
+    version=get_git_version(),
     author="Erik aronesty",
     author_email="erik@atakama.com",
     description="Fast hierarchical locks",
+    url="https://github.com/AtakamaLLC/hilok",
     long_description=long_description(),
+    long_description_content_type="text/markdown",
     ext_modules=[CMakeExtension("hilok")],
     cmdclass={"build_ext": CMakeBuild},
-    zip_safe=False,
     extras_require={"test": ["pytest>=6.0"]},
+    setup_requires=['conan'],
     python_requires=">=3.7",
+    zip_safe=True,
 )

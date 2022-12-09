@@ -1,0 +1,4 @@
+wheel
+conan
+pytest
+setuptools>=56

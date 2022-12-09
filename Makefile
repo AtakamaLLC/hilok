@@ -1,33 +1,46 @@
-DELETE_ON_ERROR:
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+	MEMCHECK_FLAGS += -T memcheck
+endif
 
-env:
-	python -mvirtualenv env
+venv:
+	python -mvenv venv
 
 requirements:
+	python -mpip install --upgrade pip
 	python -mpip install -r requirements.txt
 
-lint:
-	python -m pylint omen2
-	black omen2
+pybuild:
+	python setup.py install --force
 
-docs:
-	PYTHONPATH=. docmd omen2 -o docs -u https://github.com/atakamallc/omen2/blob/master/omen2
+cbuild:
+	mkdir cbuild
 
-black:
-	black omen2 tests
+ctest: cbuild
+	cd cbuild; cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=On
+	cd cbuild; cmake --build . -j
+	cd cbuild; ctest -V --output-on-failure $(MEMCHECK_FLAGS) .
 
-test:
-	pytest -n=3 --cov omen2 -v tests -k "not perf"
-	# parallel testing of perf tests doesn't work
-	pytest --cov omen2 --cov-append -v tests -k "perf"
+covtest: cbuild
+	cd cbuild; cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=On -DENABLE_COVERAGE=On
+	cd cbuild; cmake --build . -j
+	cd cbuild; ctest -V --output-on-failure .
+
+tsanbuild:
+	mkdir tsanbuild
+
+tsantest: tsanbuild
+	cd tsanbuild; cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=On -DENABLE_TSAN=On
+	cd tsanbuild; cmake --build . -j
+	cd tsanbuild; ctest -V --output-on-failure .
+
+pytest:
+	pytest tests
 
 publish:
 	rm -rf dist
-	python3 setup.py bdist_wheel
+	python setup.py bdist bdist_wheel
 	twine upload dist/*
 
-install-hooks:
-	pre-commit install
-
-
-.PHONY: docs black publish env requirements
+.PHONY: publish venv requirements pytest pybuild ctest
+.DELETE_ON_ERROR:
