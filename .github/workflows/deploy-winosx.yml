@@ -10,10 +10,6 @@ jobs:
     strategy:
       matrix:
         info:
-          - os: ubuntu-latest
-            python: "3.9"
-          - os: ubuntu-latest
-            python: "3.10"
           - os: windows-latest
             python: "3.9"
           - os: windows-latest

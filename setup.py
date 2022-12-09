@@ -167,6 +167,7 @@ setup(
     ext_modules=[CMakeExtension("hilok")],
     cmdclass={"build_ext": CMakeBuild},
     extras_require={"test": ["pytest>=6.0"]},
+    setup_requires=['conan'],
     python_requires=">=3.7",
     zip_safe=True,
 )
