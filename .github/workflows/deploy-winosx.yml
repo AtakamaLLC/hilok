@@ -33,8 +33,9 @@ jobs:
     - name: Build
       run: |
         python setup.py bdist_wheel
-    - uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        skip_existing: true
-        password: ${{ secrets.PYPI_API_TOKEN }}
-
+    - name: Publish wheels to PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run: |
+        twine upload dist/*
