@@ -181,7 +181,7 @@ public:
     std::mutex m_mutex;
     char m_sep;
     bool m_recursive;
-    std::shared_ptr<HiKeyNode> _get_node(std::pair<std::shared_ptr<HiKeyNode>, std::string> key);
+    std::shared_ptr<HiKeyNode> _get_node(const std::pair<std::shared_ptr<HiKeyNode>, std::string> &key);
 
 public:
 
