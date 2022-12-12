@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 #include <hilok.hpp>
 #include <psplit.hpp>
@@ -174,7 +175,6 @@ TEST_CASE( "lock-escalate-deescalate", "[basic]" ) {
     l1->release();
     auto nod = h->find_node("a");
     REQUIRE(nod);
-    nod->m_mut.dump_state(std::cout);
     CHECK(thread_check_read_locked(h, "a"));
     auto l3 = h->write(h, "a");
     l2->release();
@@ -262,45 +262,9 @@ void hold_lock_until(std::shared_ptr<HiLok> h, std::string p1, std::string p2) {
 
 
 TEST_CASE( "timed-hlock", "[basic]" ) {
-    auto h = std::make_shared<HiLok>('/', false);
-
-    auto thread_lock = h->write(h, "y");
-    auto thread = std::thread([&h] () { hold_lock_until(h, "a/b", "y"); } );
-   
-    // wait until thread lock is obtained
-    while (true) {
-        try {
-            h->read(h, "a/b", false)->release();
-        } catch (HiErr & err) {
-            break;
-        }
-    }
-
-    INFO("timed read while write");
-    {
-    auto start = std::chrono::steady_clock::now();
-    REQUIRE_THROWS_AS(h->read(h, "a/b", true, 0.01), HiErr);
-    auto end = std::chrono::steady_clock::now();
-    auto dur = std::chrono::duration<double>(end - start);
-    CHECK(dur.count() >= 0.01);
-    }
-
-    INFO("timed write while write");
-    {
-    auto start = std::chrono::steady_clock::now();
-    REQUIRE_THROWS_AS(h->write(h, "a/b", true, 0.01), HiErr);
-    auto end = std::chrono::steady_clock::now();
-    auto dur = std::chrono::duration<double>(end - start);
-    CHECK(dur.count() >= 0.01);
-    }
-    
-    thread_lock->release();
-    thread.join();
-}
-
-
-TEST_CASE( "timed-hlock-rec", "[basic]" ) {
-    auto h = std::make_shared<HiLok>('/', true);
+    auto i = GENERATE(true, false);
+    DYNAMIC_SECTION("recursive " << i) {
+    auto h = std::make_shared<HiLok>('/', i);
 
     auto thread_lock = h->write(h, "y");
     auto thread = std::thread([&h] () { hold_lock_until(h, "a/b", "y"); } );
@@ -336,6 +300,7 @@ TEST_CASE( "timed-hlock-rec", "[basic]" ) {
     
     thread_lock->release();
     thread.join();
+    }
 }
 
 

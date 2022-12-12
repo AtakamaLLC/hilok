@@ -3,8 +3,6 @@
 #include "hilok.hpp"
 #include "psplit.hpp"
 
-#define HILOK_TRACE
-
 #ifdef HILOK_TRACE
 #include <iostream>
 #endif

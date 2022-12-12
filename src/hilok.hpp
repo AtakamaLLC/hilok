@@ -169,6 +169,11 @@ public:
         m_shared(shared), m_ref(ref), m_mgr(mgr), m_released(false) {
     }
 
+    HiHandle ( HiHandle && ) = default;
+    HiHandle &  operator= ( HiHandle && ) = default;
+    HiHandle ( const HiHandle & ) = delete;
+    HiHandle & operator= ( const HiHandle & ) = delete;
+
     virtual ~HiHandle() {
         release();
     }
