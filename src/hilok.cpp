@@ -144,7 +144,7 @@ std::shared_ptr<HiKeyNode> HiLok::find_node(std::string_view path_from) {
 
         auto it = m_map.find(key);
         if (it == m_map.end()) {
-            return std::shared_ptr<HiKeyNode>();
+            return {};
         } else {
             cur = it->second;
         }
@@ -255,7 +255,7 @@ void HiLok::erase_safe(std::shared_ptr<HiKeyNode> &ref) {
 void HiLok::erase_unsafe(std::shared_ptr<HiKeyNode> &ref) {
     // lazy speedup, there can be lots of refs (parent->child ref, caller refs, etc.)
     // but if there are too many, we know the exclusive cannot work and is not worth even trying
-    if (ref.use_count() <= 6) {
+    if (ref.use_count() <= 7) {
         // maybe no one else is using it?
         if (ref->m_mut.try_lock()) {
             // we now have an exclusive lock, so we really know nobody is using it
