@@ -142,7 +142,8 @@ class HiKeyNode {
 public:
     std::pair<std::shared_ptr<HiKeyNode>, std::string> m_key;
     HiMutex m_mut;
-    HiKeyNode(std::pair<std::shared_ptr<HiKeyNode>, std::string> key, bool recursive) : m_key(key), m_mut(recursive) {
+    std::atomic<int> m_inref;
+    HiKeyNode(std::pair<std::shared_ptr<HiKeyNode>, std::string> key, bool recursive) : m_key(key), m_mut(recursive), m_inref(0) {
     }
 };
 

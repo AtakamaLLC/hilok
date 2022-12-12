@@ -7,6 +7,13 @@
 #include <iostream>
 #include <array>
 
+void slow_increment(int &ctr) {
+    int x = ctr;
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    ctr = x + 1; 
+}
+
+
 TEST_CASE( "path-split-basic", "[basic]" ) {
     std::vector<std::string> res;
     auto expect = std::vector<std::string>({"a", "b", "c"});
@@ -166,7 +173,7 @@ TEST_CASE( "rlock-simple", "[basic]" ) {
 void rlock_worker(int, HiMutex &h, int &ctr) {
     h.lock();
     h.lock();
-    ctr++;
+    slow_increment(ctr);
     h.unlock();
     h.unlock();
 }
@@ -220,9 +227,12 @@ TEST_CASE( "shared-lock-thread", "[basic]" ) {
 
 void nest_lock_worker(int &ctr, HiMutex &h1, HiMutex &h2) {
     // simulates the kind of locking that can happen in a nested set of locks, with reentrance
-    h1.lock_shared();
-    ++ctr;
-    h1.unlock_shared();
+    // lock mutex shared, then lock write child, then unlock both
+    h2.lock_shared();
+    h1.lock();
+    slow_increment(ctr);
+    h1.unlock();
+    h2.unlock_shared();
 }
 
 TEST_CASE( "simulate-nest", "[basic]" ) {
@@ -247,7 +257,7 @@ TEST_CASE( "simulate-nest", "[basic]" ) {
 void worker(int, std::shared_ptr<HiLok> h, int &ctr) {
     auto l1 = h->write(h, "a/b/c/d/e");
     auto l2 = h->write(h, "a/b/c/d/e");
-    ctr++;
+    slow_increment(ctr);
     l1->release();
     l2->release();
 }
@@ -273,7 +283,7 @@ TEST_CASE( "deep-many-threads", "[basic]" ) {
 void nesty_worker(int, std::shared_ptr<HiLok> h, int &ctr) {
     auto l2 = h->read(h, "a/b/c");
     auto l1 = h->write(h, "a/b/c/d/e");
-    ctr++;
+    slow_increment(ctr);
     l1->release();
     l2->release();
 }
@@ -300,7 +310,7 @@ void randy_worker(int i, std::shared_ptr<HiLok> &h, int &ctr) {
     std::array<const char *, 5>paths{"a", "a/b", "a/b/c", "a/b/c/d", "a/b/c/d/e"};
     int depth = (i % 5);
     auto l1 = h->write(h, paths[depth]);
-    ctr++;
+    slow_increment(ctr);
     l1->release();
 }
 
