@@ -23,7 +23,6 @@ private:
     std::shared_timed_mutex m_t_mut;
 public:
     std::thread::id m_ex_id;
-    std::mutex  m_num_mut;
     std::atomic<int> m_num_r;
     bool m_recursive;
     bool m_is_ex;
@@ -32,7 +31,6 @@ public:
     }
 
     bool is_locked() {
-        std::lock_guard<std::mutex> guard(m_num_mut);
         return m_num_r || m_is_ex;
     }
 
