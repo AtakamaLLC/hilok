@@ -29,6 +29,16 @@ def test_early_rel():
         h.write("/a/b", block=False)
 
 
+def test_rename():
+    h = HiLok(recursive=False)
+    with h.write("/a/b"):
+        h.rename("/a/b", "x")
+        with pytest.raises(HiLokError):
+            h.write("x", block=False)
+        with h.write("/a/b", block=False):
+            pass
+
+
 def test_riaa():
     h = HiLok(recursive=False)
     l = h.write("/a/b")

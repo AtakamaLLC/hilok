@@ -3,7 +3,6 @@
 #include "hilok.hpp"
 #include "psplit.hpp"
 
-
 #ifdef HILOK_TRACE
 #include <iostream>
 #endif
@@ -69,6 +68,7 @@ std::shared_ptr<HiHandle> HiLok::read(std::shared_ptr<HiLok> mgr, std::string_vi
             key = {cur, *it};
             std::shared_ptr<HiKeyNode> nod = _get_node(key);
             bool ok = shared_lock_with_params(nod->m_mut, block, timeout);
+            nod->m_inref--;
             if (!ok) {
                 throw HiErr("failed to lock");
             }
@@ -89,11 +89,14 @@ std::shared_ptr<HiHandle> HiLok::read(std::shared_ptr<HiLok> mgr, std::string_vi
 std::shared_ptr<HiKeyNode> HiLok::_get_node(const std::pair<std::shared_ptr<HiKeyNode>, std::string> &key) {
     std::lock_guard<std::mutex> guard(m_mutex);
     auto it = m_map.find(key);
+    std::shared_ptr<HiKeyNode> ret;
     if (it == m_map.end()) {
-        return m_map[key] = std::make_shared<HiKeyNode>(key, m_recursive);
+        ret = m_map[key] = std::make_shared<HiKeyNode>(key, m_recursive);
     } else {
-        return it->second;
+        ret = it->second;
     }
+    ret->m_inref++;
+    return ret;
 }
 
 
@@ -111,6 +114,7 @@ std::shared_ptr<HiHandle> HiLok::write(std::shared_ptr<HiLok> mgr, std::string_v
                 ok = shared_lock_with_params(nod->m_mut, block, timeout);
             else
                 ok = lock_with_params(nod->m_mut, block, timeout);
+            nod->m_inref--;
 
             if (!ok) {
                 throw HiErr("failed to lock");
@@ -144,7 +148,7 @@ std::shared_ptr<HiKeyNode> HiLok::find_node(std::string_view path_from) {
 
         auto it = m_map.find(key);
         if (it == m_map.end()) {
-            return std::shared_ptr<HiKeyNode>();
+            return {};
         } else {
             cur = it->second;
         }
@@ -203,7 +207,7 @@ void HiLok::rename(std::string_view path_from, std::string_view path_to, bool bl
             }
 
 #ifdef HILOK_TRACE
-            std::cout << "clon lk: " << key.first << "/" << key.second << ":" << cur_to << " " << leaf_from_node->m_mut.m_ex_cnt << std::endl;
+            std::cout << "clon lk: " << key.first << "/" << key.second << ":" << cur_to << " " << leaf_from_node->m_mut.m_is_ex << std::endl;
 #endif
             // copy lock counts from the leaf to the ancestor
             if (!cur_to->m_mut.unsafe_clone_lock_shared(leaf_from_node->m_mut, block, secs)) {
@@ -255,17 +259,25 @@ void HiLok::erase_safe(std::shared_ptr<HiKeyNode> &ref) {
 void HiLok::erase_unsafe(std::shared_ptr<HiKeyNode> &ref) {
     // lazy speedup, there can be lots of refs (parent->child ref, caller refs, etc.)
     // but if there are too many, we know the exclusive cannot work and is not worth even trying
-    if (ref.use_count() <= 6) {
+    if (ref.use_count() <= 7 && ref->m_inref == 0) {
         // maybe no one else is using it?
-        if (ref->m_mut.try_lock()) {
+        if (ref->m_mut.try_solo_lock() && ref->m_inref == 0) {
             // we now have an exclusive lock, so we really know nobody is using it
             // map + ref 
-            auto it = m_map.find(ref->m_key);
-            if (it != m_map.end()) {
-                if (it->second == ref) {
+            try {
+                auto it = m_map.find(ref->m_key);
+                if (it != m_map.end()) {
+                    if (it->second == ref) {
+#ifdef HILOK_TRACE
+                        std::cout << "erasing " << ref->m_key.second << std::endl;
+#endif
                     // i will only ever erase my own
-                    m_map.erase(it);
+                        m_map.erase(it);
+                    }
                 }
+            } catch (...) {
+                        ref->m_mut.unlock();
+                        throw;
             }
             ref->m_mut.unlock();
         }

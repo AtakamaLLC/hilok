@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 #include <hilok.hpp>
 #include <psplit.hpp>
@@ -6,6 +7,13 @@
 #include <thread>
 #include <iostream>
 #include <array>
+
+void slow_increment(int &ctr) {
+    int x = ctr;
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    ctr = x + 1; 
+}
+
 
 TEST_CASE( "path-split-basic", "[basic]" ) {
     std::vector<std::string> res;
@@ -123,11 +131,61 @@ TEST_CASE( "wr-after-rel", "[basic]" ) {
     h->read(h, "a/b", false);
 }
 
+void check_read_locked(std::shared_ptr<HiLok> h, bool &ok, std::string path) {
+    h->read(h, path, false)->release();
+    try {
+        std::cout << "check read locked" << std::endl;
+        auto l1 = h->write(h, path, false);
+        std::cout << "not read locked" << std::endl;
+    } catch (HiErr &) {
+        ok = true;
+    }
+}
+
+bool thread_check_read_locked(std::shared_ptr<HiLok> h, std::string path) {
+    bool ok = false;
+    auto thread = std::thread([&h, &ok, path] () { check_read_locked(h, ok, path); } );
+    thread.join();
+    return ok;
+}
+
+
+void check_write_locked(std::shared_ptr<HiLok> h, bool &ok, std::string path) {
+    try {
+        auto l1 = h->read(h, path, false);
+    } catch (HiErr &) {
+        ok = true;
+    }
+}
+
+bool thread_check_write_locked(std::shared_ptr<HiLok> h, std::string path) {
+    bool ok = false;
+    auto thread = std::thread([&h, &ok, path] () { check_write_locked(h, ok, path); } );
+    thread.join();
+    return ok;
+}
+
+TEST_CASE( "lock-escalate-deescalate", "[basic]" ) {
+    auto h = std::make_shared<HiLok>('/', true);
+    std::cout << "write a" << std::endl;
+    auto l1 = h->write(h, "a");
+    REQUIRE( h->find_node("a") );
+    std::cout << "read a" << std::endl;
+    auto l2 = h->read(h, "a");
+    l1->release();
+    auto nod = h->find_node("a");
+    REQUIRE(nod);
+    CHECK(thread_check_read_locked(h, "a"));
+    auto l3 = h->write(h, "a");
+    l2->release();
+    CHECK(thread_check_write_locked(h, "a"));
+    l3->release();
+}
+
 void dump_map(HiLok &h) {
     for (auto &it : h.m_map) {
         std::cout << it.first.first << "/" << it.first.second << ":" << it.second << std::endl;
     }
-
 }
 
 TEST_CASE( "rename-lock", "[basic]" ) {
@@ -158,6 +216,7 @@ TEST_CASE( "rename-lock", "[basic]" ) {
 TEST_CASE( "rlock-simple", "[basic]" ) {
     HiMutex h(true);
     h.lock();
+    h.lock();
     CHECK(h.try_lock());
     h.unlock();
     h.unlock();
@@ -166,7 +225,7 @@ TEST_CASE( "rlock-simple", "[basic]" ) {
 void rlock_worker(int, HiMutex &h, int &ctr) {
     h.lock();
     h.lock();
-    ctr++;
+    slow_increment(ctr);
     h.unlock();
     h.unlock();
 }
@@ -187,6 +246,64 @@ TEST_CASE( "rlock-thread", "[basic]" ) {
     CHECK(ctr == pool_size);
     CHECK(mut.is_locked() == false);
 }
+
+TEST_CASE( "shared-simple", "[basic]" ) {
+    HiMutex h(true);
+    h.lock_shared();
+    h.unlock_shared();
+    CHECK(!h.is_locked());
+}
+
+void hold_lock_until(std::shared_ptr<HiLok> h, std::string p1, std::string p2) {
+    auto wr1 = h->write(h, p1);
+    auto wr2 = h->write(h, p2);
+    wr1->release();
+    wr2->release();
+}
+
+
+TEST_CASE( "timed-hlock", "[basic]" ) {
+    auto i = GENERATE(true, false);
+    DYNAMIC_SECTION("recursive " << i) {
+    auto h = std::make_shared<HiLok>('/', i);
+
+    auto thread_lock = h->write(h, "y");
+    auto thread = std::thread([&h] () { hold_lock_until(h, "a/b", "y"); } );
+   
+    // wait until thread lock is obtained
+    while (true) {
+        try {
+            h->read(h, "a/b", false)->release();
+        } catch (HiErr & err) {
+            break;
+        }
+    }
+
+    INFO("timed read while write");
+    {
+    auto start = std::chrono::steady_clock::now();
+    REQUIRE_THROWS_AS(h->read(h, "a/b", true, 0.01), HiErr);
+    auto end = std::chrono::steady_clock::now();
+    auto dur = std::chrono::duration<double>(end - start);
+    CHECK(dur.count() >= 0.01);
+    }
+    
+    REQUIRE_THROWS_AS(h->read(h, "a/b", false), HiErr);
+
+    INFO("timed write while write");
+    {
+    auto start = std::chrono::steady_clock::now();
+    REQUIRE_THROWS_AS(h->write(h, "a/b", true, 0.01), HiErr);
+    auto end = std::chrono::steady_clock::now();
+    auto dur = std::chrono::duration<double>(end - start);
+    CHECK(dur.count() >= 0.01);
+    }
+    
+    thread_lock->release();
+    thread.join();
+    }
+}
+
 
 void shared_lock_worker(int, HiMutex &h) {
     h.lock_shared();
@@ -213,15 +330,12 @@ TEST_CASE( "shared-lock-thread", "[basic]" ) {
 
 void nest_lock_worker(int &ctr, HiMutex &h1, HiMutex &h2) {
     // simulates the kind of locking that can happen in a nested set of locks, with reentrance
-    h1.lock_shared();
-    h2.lock();
-    h1.lock_shared();
-    h2.lock();
-    ++ctr;
-    h1.unlock_shared();
-    h2.unlock();
-    h1.unlock_shared();
-    h2.unlock();
+    // lock mutex shared, then lock write child, then unlock both
+    h2.lock_shared();
+    h1.lock();
+    slow_increment(ctr);
+    h1.unlock();
+    h2.unlock_shared();
 }
 
 TEST_CASE( "simulate-nest", "[basic]" ) {
@@ -246,7 +360,7 @@ TEST_CASE( "simulate-nest", "[basic]" ) {
 void worker(int, std::shared_ptr<HiLok> h, int &ctr) {
     auto l1 = h->write(h, "a/b/c/d/e");
     auto l2 = h->write(h, "a/b/c/d/e");
-    ctr++;
+    slow_increment(ctr);
     l1->release();
     l2->release();
 }
@@ -272,7 +386,7 @@ TEST_CASE( "deep-many-threads", "[basic]" ) {
 void nesty_worker(int, std::shared_ptr<HiLok> h, int &ctr) {
     auto l2 = h->read(h, "a/b/c");
     auto l1 = h->write(h, "a/b/c/d/e");
-    ctr++;
+    slow_increment(ctr);
     l1->release();
     l2->release();
 }
@@ -299,7 +413,7 @@ void randy_worker(int i, std::shared_ptr<HiLok> &h, int &ctr) {
     std::array<const char *, 5>paths{"a", "a/b", "a/b/c", "a/b/c/d", "a/b/c/d/e"};
     int depth = (i % 5);
     auto l1 = h->write(h, paths[depth]);
-    ctr++;
+    slow_increment(ctr);
     l1->release();
 }
 

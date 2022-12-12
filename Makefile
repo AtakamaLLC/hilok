@@ -19,12 +19,12 @@ cbuild:
 ctest: cbuild
 	cd cbuild; cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=On
 	cd cbuild; cmake --build . -j
-	cd cbuild; ctest -V --output-on-failure $(MEMCHECK_FLAGS) .
+	cd cbuild; ctest -v --output-on-failure $(MEMCHECK_FLAGS) .
 
 covtest: cbuild
 	cd cbuild; cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=On -DENABLE_COVERAGE=On
 	cd cbuild; cmake --build . -j
-	cd cbuild; ctest -V --output-on-failure .
+	cd cbuild; ctest -v --output-on-failure .
 
 tsanbuild:
 	mkdir tsanbuild
@@ -32,7 +32,7 @@ tsanbuild:
 tsantest: tsanbuild
 	cd tsanbuild; cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=On -DENABLE_TSAN=On
 	cd tsanbuild; cmake --build . -j
-	cd tsanbuild; ctest -V --output-on-failure .
+	cd tsanbuild; ctest -v --output-on-failure .
 
 pytest:
 	pytest tests

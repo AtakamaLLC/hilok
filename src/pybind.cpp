@@ -27,6 +27,14 @@ PYBIND11_MODULE(hilok, m)
                     timeout = 0.0;
                 return lok->read(lok, path, block.value(), timeout.value());
             }, py::arg("path"), py::arg("block") = true, py::arg("timeout") = 0.0)
+        .def("rename", [](std::shared_ptr<HiLok> lok, std::string_view from, std::string_view to, std::optional<bool> block, std::optional<double> timeout) {
+                py::gil_scoped_release _gil_rel;
+                if (!block.has_value())
+                    block = true;
+                if (!timeout.has_value())
+                    timeout = 0.0;
+                return lok->rename(from, to, block.value(), timeout.value());
+            }, py::arg("from"), py::arg("to"), py::arg("block") = true, py::arg("timeout") = 0.0)
         ;
 
     py::class_<HiHandle, std::shared_ptr<HiHandle>>(m, "HiHandle")

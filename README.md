@@ -1,4 +1,4 @@
-= Hierarchical locks
+# Hierarchical locks
 
 Allows the caller to lock a "directory", or an individual file.
 
@@ -8,7 +8,7 @@ First optional argument to the lock manager is the "sep".
 
 Second optional argument is "recursive" (default true).
 
-```
+```python
 from hilok import HiLok
 
 h = HiLok()     # default sep is '/', can pass it in here
@@ -31,5 +31,6 @@ rd = h.read("/some/path", block=False)
 # with syntax is fine:
 with h.read("/some/path"):
     pass
-
 ```
+
+Lock escalation (read/write/release-read) and de-escalation (write/read/release-write) are supported.

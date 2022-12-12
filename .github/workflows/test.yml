@@ -35,6 +35,7 @@ jobs:
         python -m pip install --upgrade pip
         make requirements
     - name: Test
+      shell: bash
       run: |
         ./ci-test.sh
         ./ci-cov.sh ${{ secrets.CODECOV_TOKEN }}

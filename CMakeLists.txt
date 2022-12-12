@@ -33,7 +33,7 @@ if (${ENABLE_TESTS})
 
 find_package(Catch2 3 REQUIRED)
 find_package(Threads REQUIRED)
-add_executable(tests tests/test.cpp src/hilok.cpp)
+add_executable(tests tests/test.cpp src/hilok.cpp src/recsh.cpp src/hilok.hpp src/recsh.hpp)
 
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(tests PRIVATE Threads::Threads)
@@ -64,6 +64,8 @@ endif()
 
 ############# codecov
 if (${ENABLE_COVERAGE})
+    SET(CMAKE_CXX_FLAGS_DEBUG "-O0")
+    SET(CMAKE_C_FLAGS_DEBUG "-O0")
     set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/externals/CMake-codecov/cmake" ${CMAKE_MODULE_PATH})
     find_package(codecov)
     add_coverage(tests)
@@ -84,7 +86,7 @@ endif()
 ############# pybind11
 find_package(pybind11 REQUIRED)
 
-pybind11_add_module(hilok MODULE src/pybind.cpp src/hilok.cpp)
+pybind11_add_module(hilok MODULE src/pybind.cpp src/hilok.cpp src/recsh.cpp)
 
 target_link_libraries(hilok PRIVATE pybind11::headers)
 if (NOT ${ENABLE_TESTS})
