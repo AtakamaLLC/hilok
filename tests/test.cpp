@@ -131,7 +131,7 @@ TEST_CASE( "wr-after-rel", "[basic]" ) {
     h->read(h, "a/b", false);
 }
 
-bool check_read_locked(std::shared_ptr<HiLok> h, bool &ok, std::string path) {
+void check_read_locked(std::shared_ptr<HiLok> h, bool &ok, std::string path) {
     h->read(h, path, false)->release();
     try {
         std::cout << "check read locked" << std::endl;
@@ -150,7 +150,7 @@ bool thread_check_read_locked(std::shared_ptr<HiLok> h, std::string path) {
 }
 
 
-bool check_write_locked(std::shared_ptr<HiLok> h, bool &ok, std::string path) {
+void check_write_locked(std::shared_ptr<HiLok> h, bool &ok, std::string path) {
     try {
         auto l1 = h->read(h, path, false);
     } catch (HiErr &) {
