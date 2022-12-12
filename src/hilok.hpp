@@ -27,11 +27,11 @@ public:
     bool m_recursive;
     bool m_is_ex;
 
-    HiMutex(bool recursive) : m_num_r(0), m_recursive(recursive) {
+    HiMutex(bool recursive) : m_num_r(0), m_recursive(recursive), m_is_ex(false) {
     }
 
     bool is_locked() {
-        return m_num_r || m_is_ex;
+        return (m_num_r > 0) || m_is_ex;
     }
 
     bool unsafe_clone_lock_shared(HiMutex &src, bool block, double secs) {
@@ -133,8 +133,8 @@ public:
     }
 
     void unlock_shared() {
-        --m_num_r;
         mut_op(unlock_shared);
+        --m_num_r;
     }
 };
 
