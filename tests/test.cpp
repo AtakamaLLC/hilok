@@ -271,6 +271,8 @@ TEST_CASE( "timed-hlock-rec", "[basic]" ) {
     auto dur = std::chrono::duration<double>(end - start);
     CHECK(dur.count() >= 0.01);
     }
+    
+    REQUIRE_THROWS_AS(h->read(h, "a/b", false), HiErr);
 
     INFO("timed write while write");
     {
