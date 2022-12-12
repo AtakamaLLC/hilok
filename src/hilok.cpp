@@ -3,6 +3,8 @@
 #include "hilok.hpp"
 #include "psplit.hpp"
 
+#define HILOK_TRACE
+
 #ifdef HILOK_TRACE
 #include <iostream>
 #endif
@@ -261,12 +263,15 @@ void HiLok::erase_unsafe(std::shared_ptr<HiKeyNode> &ref) {
     // but if there are too many, we know the exclusive cannot work and is not worth even trying
     if (ref.use_count() <= 7 && ref->m_inref == 0) {
         // maybe no one else is using it?
-        if (ref->m_mut.try_lock() && ref->m_inref == 0) {
+        if (ref->m_mut.try_solo_lock() && ref->m_inref == 0) {
             // we now have an exclusive lock, so we really know nobody is using it
             // map + ref 
             auto it = m_map.find(ref->m_key);
             if (it != m_map.end()) {
                 if (it->second == ref) {
+#ifdef HILOK_TRACE
+                    std::cout << "erasing " << ref->m_key.second << std::endl;
+#endif
                     // i will only ever erase my own
                     m_map.erase(it);
                 }

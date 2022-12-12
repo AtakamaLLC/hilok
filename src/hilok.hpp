@@ -85,6 +85,15 @@ public:
         return false;
     }
 
+    bool try_solo_lock() {
+        if (m_recursive ? m_r_mut.try_solo_lock() : m_t_mut.try_lock()) {
+            m_is_ex = true;
+            return true;
+        }
+        return false;
+    }
+
+
     bool try_lock_for(double secs) {
         if (mut_op_1(try_lock_for, std::chrono::duration<double>(secs))) {
             m_is_ex = true;

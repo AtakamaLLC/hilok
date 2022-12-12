@@ -18,6 +18,7 @@ public:
 
     void lock();
     bool try_lock();
+    bool try_solo_lock();
     bool try_lock_for( const std::chrono::duration<double>& secs);
     void unlock();
 
@@ -51,9 +52,14 @@ private:
         return !is_exclusive_locked() && (!is_shared_locked() || is_shared_locked_only_on_this_thread());
     }
 
+    inline bool can_start_solo_lock()
+    {
+        return !is_exclusive_locked() && !is_shared_locked();
+    }
+
     inline bool can_increment_exclusive_lock()
     {
-        return is_exclusive_locked_on_this_thread();
+        return is_exclusive_locked_on_this_thread() && !m_solo_locked;
     }
 
     inline bool can_lock_shared()
@@ -85,6 +91,12 @@ private:
     {
         m_exclusive_thread_id = std::this_thread::get_id();
         m_exclusive_count++;
+    }
+
+    inline void start_solo_lock()
+    {
+        start_exclusive_lock();
+        m_solo_locked = true;
     }
 
     inline void increment_exclusive_lock()
@@ -156,6 +168,7 @@ private:
     std::mutex m_mtx;
     std::thread::id m_exclusive_thread_id;
     size_t m_exclusive_count;
+    bool m_solo_locked;
     std::map<std::thread::id, size_t> m_shared_locks;
     std::condition_variable m_cond_var;
 };

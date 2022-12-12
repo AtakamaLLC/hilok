@@ -1,5 +1,6 @@
 #include "recsh.hpp"
 #include <mutex>
+#include <iostream>
 
 bool recursive_shared_mutex::try_lock_for(const std::chrono::duration<double> &secs)
 {
@@ -48,11 +49,23 @@ bool recursive_shared_mutex::try_lock()
     return false;
 }
 
+bool recursive_shared_mutex::try_solo_lock()
+{
+    std::unique_lock<std::mutex> sync_lock(m_mtx);
+    if (can_start_solo_lock())
+    {
+        start_solo_lock();
+        return true;
+    }
+    return false;
+}
+
 void recursive_shared_mutex::unlock()
 {
     {
         std::unique_lock<std::mutex> sync_lock(m_mtx);
         decrement_exclusive_lock();
+        m_solo_locked = false;
     }
     m_cond_var.notify_all();
 }

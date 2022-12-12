@@ -130,11 +130,62 @@ TEST_CASE( "wr-after-rel", "[basic]" ) {
     h->read(h, "a/b", false);
 }
 
+bool check_read_locked(std::shared_ptr<HiLok> h, bool &ok, std::string path) {
+    h->read(h, path, false)->release();
+    try {
+        std::cout << "check read locked" << std::endl;
+        auto l1 = h->write(h, path, false);
+        std::cout << "not read locked" << std::endl;
+    } catch (HiErr &) {
+        ok = true;
+    }
+}
+
+bool thread_check_read_locked(std::shared_ptr<HiLok> h, std::string path) {
+    bool ok = false;
+    auto thread = std::thread([&h, &ok, path] () { check_read_locked(h, ok, path); } );
+    thread.join();
+    return ok;
+}
+
+
+bool check_write_locked(std::shared_ptr<HiLok> h, bool &ok, std::string path) {
+    try {
+        auto l1 = h->read(h, path, false);
+    } catch (HiErr &) {
+        ok = true;
+    }
+}
+
+bool thread_check_write_locked(std::shared_ptr<HiLok> h, std::string path) {
+    bool ok = false;
+    auto thread = std::thread([&h, &ok, path] () { check_write_locked(h, ok, path); } );
+    thread.join();
+    return ok;
+}
+
+TEST_CASE( "lock-escalate-deescalate", "[basic]" ) {
+    auto h = std::make_shared<HiLok>('/', true);
+    std::cout << "write a" << std::endl;
+    auto l1 = h->write(h, "a");
+    REQUIRE( h->find_node("a") );
+    std::cout << "read a" << std::endl;
+    auto l2 = h->read(h, "a");
+    l1->release();
+    auto nod = h->find_node("a");
+    REQUIRE(nod);
+    nod->m_mut.dump_state(std::cout);
+    CHECK(thread_check_read_locked(h, "a"));
+    auto l3 = h->write(h, "a");
+    l2->release();
+    CHECK(thread_check_write_locked(h, "a"));
+    l3->release();
+}
+
 void dump_map(HiLok &h) {
     for (auto &it : h.m_map) {
         std::cout << it.first.first << "/" << it.first.second << ":" << it.second << std::endl;
     }
-
 }
 
 TEST_CASE( "rename-lock", "[basic]" ) {
