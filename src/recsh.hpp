@@ -7,13 +7,14 @@
 #include <mutex>
 #include <condition_variable>
 #include <map>
+#include "hierr.hpp"
 
 struct recursive_shared_mutex
 {
 public:
 
     recursive_shared_mutex() :
-        m_mtx{}, m_exclusive_thread_id{}, m_exclusive_count{ 0 }, m_shared_locks{}
+        m_mtx{}, m_exclusive_thread_id{}, m_exclusive_count{ 0 }, m_shared_locks{}, m_solo_locked{0}
     {}
 
     void lock();
@@ -108,7 +109,7 @@ private:
     {
         if (m_exclusive_count == 0)
         {
-            throw std::logic_error("Not exclusively locked, cannot exclusively unlock");
+            throw HiErr("Not exclusively locked, cannot exclusively unlock");
         }
         if (m_exclusive_thread_id == std::this_thread::get_id())
         {
@@ -116,7 +117,7 @@ private:
         }
         else
         {
-            throw std::logic_error("Calling exclusively unlock from the wrong thread");
+            throw HiErr("Calling exclusively unlock from the wrong thread");
         }
     }
 
@@ -146,11 +147,11 @@ private:
     {
         if (m_shared_locks.size() == 0)
         {
-            throw std::logic_error("Not shared locked, cannot shared unlock");
+            throw HiErr("Not shared locked, cannot shared unlock");
         }
         if (m_shared_locks.find(id) == m_shared_locks.end())
         {
-            throw std::logic_error("Calling shared unlock from the wrong thread");
+            throw HiErr("Calling shared unlock from the wrong thread");
         }
         else
         {
@@ -168,9 +169,9 @@ private:
     std::mutex m_mtx;
     std::thread::id m_exclusive_thread_id;
     size_t m_exclusive_count;
-    bool m_solo_locked;
     std::map<std::thread::id, size_t> m_shared_locks;
     std::condition_variable m_cond_var;
+    bool m_solo_locked;
 };
 
 #endif

@@ -9,10 +9,7 @@
 #include <shared_mutex>
 
 #include "recsh.hpp"
-
-class HiErr : public std::runtime_error {
-    using std::runtime_error::runtime_error;
-};
+#include "hierr.hpp"
 
 #define mut_op(op) (m_recursive ? m_r_mut.op() : m_t_mut.op())
 #define mut_op_1(op, a) (m_recursive ? m_r_mut.op(a) : m_t_mut.op(a))

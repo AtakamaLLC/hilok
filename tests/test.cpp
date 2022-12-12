@@ -216,6 +216,7 @@ TEST_CASE( "rename-lock", "[basic]" ) {
 TEST_CASE( "rlock-simple", "[basic]" ) {
     HiMutex h(true);
     h.lock();
+    h.lock();
     CHECK(h.try_lock());
     h.unlock();
     h.unlock();

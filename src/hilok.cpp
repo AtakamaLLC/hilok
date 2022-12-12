@@ -264,15 +264,20 @@ void HiLok::erase_unsafe(std::shared_ptr<HiKeyNode> &ref) {
         if (ref->m_mut.try_solo_lock() && ref->m_inref == 0) {
             // we now have an exclusive lock, so we really know nobody is using it
             // map + ref 
-            auto it = m_map.find(ref->m_key);
-            if (it != m_map.end()) {
-                if (it->second == ref) {
+            try {
+                auto it = m_map.find(ref->m_key);
+                if (it != m_map.end()) {
+                    if (it->second == ref) {
 #ifdef HILOK_TRACE
-                    std::cout << "erasing " << ref->m_key.second << std::endl;
+                        std::cout << "erasing " << ref->m_key.second << std::endl;
 #endif
                     // i will only ever erase my own
-                    m_map.erase(it);
+                        m_map.erase(it);
+                    }
                 }
+            } catch (...) {
+                        ref->m_mut.unlock();
+                        throw;
             }
             ref->m_mut.unlock();
         }
