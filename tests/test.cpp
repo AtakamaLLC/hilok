@@ -202,6 +202,51 @@ TEST_CASE( "shared-simple", "[basic]" ) {
     CHECK(!h.is_locked());
 }
 
+void hold_lock_until(std::shared_ptr<HiLok> h, std::string p1, std::string p2) {
+    auto wr1 = h->write(h, p1);
+    auto wr2 = h->write(h, p2);
+    wr1->release();
+    wr2->release();
+}
+
+
+TEST_CASE( "timed-hlock", "[basic]" ) {
+    auto h = std::make_shared<HiLok>('/', false);
+
+    auto thread_lock = h->write(h, "y");
+    auto thread = std::thread([&h] () { hold_lock_until(h, "a/b", "y"); } );
+   
+    // wait until thread lock is obtained
+    while (true) {
+        try {
+            h->read(h, "a/b", false)->release();
+        } catch (HiErr & err) {
+            break;
+        }
+    }
+
+    INFO("timed read while write");
+    {
+    auto start = std::chrono::steady_clock::now();
+    REQUIRE_THROWS_AS(h->read(h, "a/b", true, 0.01), HiErr);
+    auto end = std::chrono::steady_clock::now();
+    auto dur = std::chrono::duration<double>(end - start);
+    CHECK(dur.count() >= 0.01);
+    }
+
+    INFO("timed write while write");
+    {
+    auto start = std::chrono::steady_clock::now();
+    REQUIRE_THROWS_AS(h->write(h, "a/b", true, 0.01), HiErr);
+    auto end = std::chrono::steady_clock::now();
+    auto dur = std::chrono::duration<double>(end - start);
+    CHECK(dur.count() >= 0.01);
+    }
+    
+    thread_lock->release();
+    thread.join();
+}
+
 void shared_lock_worker(int, HiMutex &h) {
     h.lock_shared();
     h.lock_shared();

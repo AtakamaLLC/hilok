@@ -3,7 +3,6 @@
 #include "hilok.hpp"
 #include "psplit.hpp"
 
-
 #ifdef HILOK_TRACE
 #include <iostream>
 #endif
@@ -208,7 +207,7 @@ void HiLok::rename(std::string_view path_from, std::string_view path_to, bool bl
             }
 
 #ifdef HILOK_TRACE
-            std::cout << "clon lk: " << key.first << "/" << key.second << ":" << cur_to << " " << leaf_from_node->m_mut.m_ex_cnt << std::endl;
+            std::cout << "clon lk: " << key.first << "/" << key.second << ":" << cur_to << " " << leaf_from_node->m_mut.m_is_ex << std::endl;
 #endif
             // copy lock counts from the leaf to the ancestor
             if (!cur_to->m_mut.unsafe_clone_lock_shared(leaf_from_node->m_mut, block, secs)) {
