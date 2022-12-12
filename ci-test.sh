@@ -15,6 +15,7 @@ make pytest
 
 if [ "$(uname -s)" == "Linux" ]; then
     make tsantest
+    make covtest
 fi
 
 

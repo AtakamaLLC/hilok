@@ -84,8 +84,8 @@ TEST_CASE( "ex-riaa", "[basic]" ) {
 TEST_CASE( "rd-in-wr", "[basic]" ) {
     auto h = std::make_shared<HiLok>('/', false);
     auto l1 = h->write(h, "a/b/c");
-    REQUIRE_THROWS(h->write(h, "a", false));
-    REQUIRE_THROWS(h->write(h, "a/b", false));
+    REQUIRE_THROWS_AS(h->write(h, "a", false), HiErr);
+    REQUIRE_THROWS_AS(h->write(h, "a/b", false), HiErr);
 
     INFO("read lock while write");
     auto l2 = h->read(h, "a/b", false);
@@ -95,11 +95,11 @@ TEST_CASE( "rd-in-wr", "[basic]" ) {
     l1->release();
     
     INFO("write lock root after partial release");
-    REQUIRE_THROWS(h->write(h, "a", false));
+    REQUIRE_THROWS_AS(h->write(h, "a", false), HiErr);
     
     l3->release();
     INFO("write lock root after partial release");
-    REQUIRE_THROWS(h->write(h, "a", false));
+    REQUIRE_THROWS_AS(h->write(h, "a", false), HiErr);
     
     l2->release();
 
@@ -116,7 +116,7 @@ TEST_CASE( "wr-after-rel", "[basic]" ) {
     auto l4 = h->write(h, "a", false);
     
     INFO("read child fails after write root");
-    REQUIRE_THROWS(h->read(h, "a/b", false));
+    REQUIRE_THROWS_AS(h->read(h, "a/b", false), HiErr);
     l4->release();
 
     INFO("read child ok now");
@@ -139,7 +139,7 @@ TEST_CASE( "rename-lock", "[basic]" ) {
     REQUIRE(h->size() == 4);
 
     // a/b/r now locked
-    REQUIRE_THROWS(h->write(h, "a/b/r", false));
+    REQUIRE_THROWS_AS(h->write(h, "a/b/r", false), HiErr);
 
     // a/b/c not locked anymore
     auto l2 = h->write(h, "a/b/c", false);

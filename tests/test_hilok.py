@@ -37,6 +37,18 @@ def test_riaa():
     del l
 
 
+def test_none():
+    h = HiLok(recursive=False)
+    l = h.write("/a/b")
+    with pytest.raises(HiLokError):
+        # none is allowed, and is ignored
+        l = h.write("/a/b", block=False, timeout=None)
+
+    with pytest.raises(HiLokError):
+        # none is allowed, and is ignored
+        l = h.read("/a/b", block=False, timeout=None)
+
+
 def test_with_rd():
     h = HiLok(recursive=False)
     with h.read("/a/b"):

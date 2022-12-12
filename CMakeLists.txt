@@ -4,10 +4,9 @@ set(CMAKE_CXX_STANDARD 17)
 
 project(hilok)
 
-find_package(Python COMPONENTS Interpreter Development)
+find_package(Python COMPONENTS Interpreter Development.Module)
 
 ############# conan
-
 set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR} ${CMAKE_MODULE_PATH})
 
 # see: https://github.com/conan-io/cmake-conan
@@ -28,12 +27,13 @@ conan_cmake_install(PATH_OR_REFERENCE . BUILD missing SETTINGS ${settings})
 ############# catch2
 option(ENABLE_TESTS "Enable tests" OFF)
 option(ENABLE_TSAN "Enable tsan" OFF)
+option(ENABLE_COVERAGE "Enable coverage" OFF)
 
 if (${ENABLE_TESTS})
 
 find_package(Catch2 3 REQUIRED)
 find_package(Threads REQUIRED)
-add_executable(tests tests/test.cpp src/hilok.cpp src/recsh.cpp)
+add_executable(tests tests/test.cpp src/hilok.cpp)
 
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(tests PRIVATE Threads::Threads)
@@ -43,13 +43,10 @@ include(CTest)
 include(Catch)
 catch_discover_tests(tests)
 
-if (UNIX AND NOT APPLE)
-    set(CATCH_ENABLE_COVERAGE ON)
-endif()
-
 enable_testing()
 
 
+############# tsan
 if (${ENABLE_TSAN})
   target_compile_options(tests PRIVATE "-fsanitize=thread")
 
@@ -64,8 +61,19 @@ if (${ENABLE_TSAN})
   target_link_libraries(tests PRIVATE tsan)
 endif()
 
+
+############# codecov
+if (${ENABLE_COVERAGE})
+    set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/externals/CMake-codecov/cmake" ${CMAKE_MODULE_PATH})
+    find_package(codecov)
+    add_coverage(tests)
+    list(APPEND LCOV_REMOVE_PATTERNS "'/usr/*'")
+    coverage_evaluate()
 endif()
 
+endif()
+
+############# extra warnings & lint
 if(MSVC)
   add_compile_options(/W4 /WX)
 else()
@@ -76,24 +84,22 @@ endif()
 ############# pybind11
 find_package(pybind11 REQUIRED)
 
-pybind11_add_module(hilok src/pybind.cpp src/hilok.cpp src/recsh.cpp)
+pybind11_add_module(hilok MODULE src/pybind.cpp src/hilok.cpp)
 
 target_link_libraries(hilok PRIVATE pybind11::headers)
-
+if (NOT ${ENABLE_TESTS})
 # settings taken from pybind11 docs
 # see: https://pybind11.readthedocs.io/en/stable/cmake/index.html
 set_target_properties(hilok PROPERTIES INTERPROCEDURAL_OPTIMIZATION ON VISIBILITY_INLINES_HIDDEN ON)
-
+endif()
 
 ############# clang-tidy
+if (${ENABLE_TESTS})
 if (NOT APPLE)
 find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
 set(CLANG_TIDY_COMMAND "${CLANG_TIDY_EXE}" "-checks=-*,modernize-*,-*-use-trailing-return-type")
 set_target_properties(hilok PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}")
-if (${ENABLE_TESTS})
 set_target_properties(tests PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}")
 endif()
 endif()
-
-
 

@@ -1,3 +1,4 @@
+#pragma once
 #include <string_view>
 #include <string>
 
@@ -5,42 +6,49 @@ class PathSplit {
   
     std::string_view m_vw;
     char m_sep;
-    size_t next;
+    size_t m_next;
 
 
 public:
 
-
-    PathSplit(std::string_view path, char sep='/') : m_vw(path), m_sep(sep) {
+    void trim_seps() {
         while (!m_vw.empty() && m_vw[0] == m_sep) {
             m_vw.remove_prefix(1);
         }
-        next = m_vw.find(m_sep);
+    }
+
+    void seek_next() {
+        trim_seps();
+        m_next = m_vw.find(m_sep);
+    }
+
+
+
+    PathSplit(std::string_view path, char sep='/') : m_vw(path), m_sep(sep) {
+        seek_next();
     }
 
     std::string operator *() {
-        if (next != std::string_view::npos) {
-            return std::string(m_vw.substr(0, next));
+        if (m_next != std::string_view::npos) {
+            return std::string(m_vw.substr(0, m_next));
         } else {
             return std::string(m_vw);
         }
     }
 
     PathSplit & operator ++() {
-        if (next != std::string_view::npos) {
-            m_vw.remove_prefix(next + 1);
-            while (!m_vw.empty() && m_vw[0] == m_sep) {
-                m_vw.remove_prefix(1);
-            }
-            next = m_vw.find(m_sep);
+        if (m_next != std::string_view::npos) {
+            m_vw.remove_prefix(m_next + 1);
+            seek_next();
         } else {
             m_vw.remove_prefix(m_vw.size());
         }
         return *this;
     }
 
-    bool operator != (const void *) {
+    bool operator != (const void *ptr) {
         // we only support comparison with null
+        if (ptr) throw std::logic_error("only for comparing with null");
         return !m_vw.empty(); 
     }
 

@@ -22,7 +22,9 @@ jobs:
             python: "3.9"
     name: ${{matrix.info.os}} ${{ matrix.info.python }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
+      with:
+          submodules: true
     - uses: actions/setup-python@v2
       name: Setup Python ${{ matrix.info.python }}
       with:
