@@ -22,6 +22,13 @@ def test_with_wr():
         pass
 
 
+def test_write_parent():
+    h = HiLok(recursive=False)
+    with h.read("/a/b/c/d/e"):
+        with pytest.raises(HiLokError):
+            h.write("/a/b", timeout=0.1)
+
+
 def test_early_rel():
     h = HiLok(recursive=False)
     with h.write("/a/b") as l:
@@ -37,7 +44,13 @@ def test_rename():
             h.write("x", block=False)
         with h.write("/a/b", block=False):
             pass
+        h.rename("x", "c:/long/path/windows/style")
+        h.rename("c:/long/path/windows/style", "c:/long/path/super")
+        with h.write("c:/long/path"):
+            h.rename("c:/long/path/super", "c:/long/path", block=False)
 
+    with pytest.raises(HiLokError):
+        h.rename("notthere", "whatever")
 
 def test_riaa():
     h = HiLok(recursive=False)

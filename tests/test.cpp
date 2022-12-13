@@ -213,6 +213,23 @@ TEST_CASE( "rename-lock", "[basic]" ) {
 }
 
 
+TEST_CASE( "rename-on-top", "[basic]" ) {
+    auto h = std::make_shared<HiLok>('/', false);
+    auto l1 = h->write(h, "a/b/c/d");
+    auto l2 = h->write(h, "a/b/c");
+    h->rename("a/b/c/d", "a/b/c", false);
+   
+    // a/b/c write locked
+    REQUIRE_THROWS_AS(h->read(h, "a/b/c", false), HiErr);
+
+    l1->release();
+    l2->release();
+
+    CHECK(h->size() == 0);
+}
+
+
+
 TEST_CASE( "rlock-simple", "[basic]" ) {
     HiMutex h(true);
     h.lock();

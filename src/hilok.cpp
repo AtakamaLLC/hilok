@@ -213,41 +213,38 @@ void HiLok::rename(std::string_view path_from, std::string_view path_to, bool bl
             if (!cur_to->m_mut.unsafe_clone_lock_shared(leaf_from_node->m_mut, block, secs)) {
                 throw HiErr("unable to lock rename dest");
             }
-        } else {
-            cur_to.reset(); // refcount for erase
+        }
+    }
+    cur_to.reset(); // refcount for erase
 
-            while (it_from != it_from.end()) {
-                // uncommon ancestor of source must be released
-                ++it_from;
+    while (it_from != it_from.end()) {
+        // uncommon ancestor of source must be released
+        ++it_from;
 
-                auto it = m_map.find(from_key);
+        auto it = m_map.find(from_key);
 
-                // we already tested for this above, and we have a mutex, should never happen
-                assert(it != m_map.end());
+        // we already tested for this above, and we have a mutex, should never happen
+        assert(it != m_map.end());
 
-                cur_from = it->second;
+        cur_from = it->second;
 
 #ifdef HILOK_TRACE
-                std::cout << "clon un: " << from_key.first << "/" << from_key.second << ":" << cur_from << std::endl;
+        std::cout << "clon un: " << from_key.first << "/" << from_key.second << ":" << cur_from << std::endl;
 #endif
-                // unlock uncommon ancestors of the source
-                cur_from->m_mut.unsafe_clone_unlock_shared(leaf_from_node->m_mut);
+        // unlock uncommon ancestors of the source
+        cur_from->m_mut.unsafe_clone_unlock_shared(leaf_from_node->m_mut);
 
-                from_key.first.reset(); // refcount for erase
-                // could have went to 0
-                erase_unsafe(cur_from);
-            
-                from_key = {cur_from, *it_from};
-            }
-
-            // keep leaf locks, change key
-            m_map.erase(leaf_from_node->m_key);
-            leaf_from_node->m_key = key;
-            m_map[key] = leaf_from_node;        
-       } 
+        from_key.first.reset(); // refcount for erase
+        // could have went to 0
+        erase_unsafe(cur_from);
+    
+        from_key = {cur_from, *it_from};
     }
 
-
+    // keep leaf locks, change key
+    m_map.erase(leaf_from_node->m_key);
+    leaf_from_node->m_key = key;
+    m_map[key] = leaf_from_node;        
 }
 
 
