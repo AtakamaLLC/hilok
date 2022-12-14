@@ -68,7 +68,7 @@ private:
 
     inline bool can_lock_shared()
     {
-        return !is_exclusive_locked() || is_exclusive_locked_on_this_thread();
+        return !is_exclusive_locked() || (!m_wr_only && is_exclusive_locked_on_this_thread());
     }
 
     inline bool is_shared_locked_only_on_this_thread()

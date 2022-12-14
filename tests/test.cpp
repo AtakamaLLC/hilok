@@ -248,6 +248,16 @@ TEST_CASE( "rlock-simple", "[basic]" ) {
     h.unlock();
 }
 
+TEST_CASE( "rlock-wronly", "[basic]" ) {
+    HiMutex h(HiFlags::RECURSIVE_WRITE);
+    h.lock();
+    h.lock();
+    CHECK(!h.try_lock_shared());
+    CHECK(h.try_lock());
+    h.unlock();
+    h.unlock();
+}
+
 void rlock_worker(int, HiMutex &h, int &ctr) {
     h.lock();
     h.lock();
