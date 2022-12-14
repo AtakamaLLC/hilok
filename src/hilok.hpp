@@ -6,13 +6,14 @@
 #include <vector>
 #include <thread>
 #include <atomic>
+#include <cassert>
 #include <shared_mutex>
 
 #include "recsh.hpp"
 #include "hierr.hpp"
 
-#define mut_op(op) (m_rec_flags ? m_r_mut.op() : m_t_mut.op())
-#define mut_op_1(op, a) (m_rec_flags ? m_r_mut.op(a) : m_t_mut.op(a))
+#define mut_op(op) (is_recursive() ? m_r_mut.op() : m_t_mut.op())
+#define mut_op_1(op, a) (is_recursive() ? m_r_mut.op(a) : m_t_mut.op(a))
 
  enum HiFlags { 
      STRICT = 0,                // no recursion, strict release
@@ -30,7 +31,7 @@ private:
 public:
     std::thread::id m_ex_id;
     std::atomic<int> m_num_r;
-    bool m_rec_flags;
+    int m_rec_flags;
     bool m_is_ex;
 
     HiMutex(int rec_flags) : m_r_mut(!(rec_flags & HiFlags::RECURSIVE_READ)), m_num_r(0), m_rec_flags(rec_flags), m_is_ex(false) {
@@ -42,6 +43,11 @@ public:
     bool is_locked() {
         return (m_num_r > 0) || m_is_ex;
     }
+
+    bool is_recursive() {
+        return m_rec_flags & HiFlags::RECURSIVE;
+    }
+
 
     bool unsafe_clone_lock_shared(HiMutex &src, bool block, double secs) {
         auto num = (src.m_num_r + (src.m_is_ex ? 1 : 0));
@@ -95,7 +101,7 @@ public:
     }
 
     bool try_solo_lock() {
-        if (m_rec_flags ? m_r_mut.try_solo_lock() : m_t_mut.try_lock()) {
+        if (is_recursive() ? m_r_mut.try_solo_lock() : m_t_mut.try_lock()) {
             m_is_ex = true;
             return true;
         }
@@ -115,7 +121,13 @@ public:
         m_is_ex = false;
         mut_op(unlock);
     }
-    
+
+    void unlock(std::thread::id tid) {
+        assert(is_recursive());
+        m_r_mut.unlock(tid);
+        --m_num_r;
+    }
+   
     void lock_shared() {
         mut_op(lock_shared);
         ++m_num_r;
@@ -154,6 +166,12 @@ public:
         mut_op(unlock_shared);
         --m_num_r;
     }
+
+    void unlock_shared(std::thread::id tid) {
+        assert(is_recursive());
+        m_r_mut.unlock_shared(tid);
+        --m_num_r;
+    }
 };
 
 class HiKeyNode {
@@ -173,10 +191,11 @@ class HiHandle {
     std::shared_ptr<HiKeyNode> m_ref;
     std::shared_ptr<HiLok> m_mgr;
     bool m_released;
+    std::thread::id m_src_thread;
 
 public:
     HiHandle(std::shared_ptr<HiLok> mgr, bool shared, std::shared_ptr<HiKeyNode> ref) :
-        m_shared(shared), m_ref(ref), m_mgr(mgr), m_released(false) {
+        m_shared(shared), m_ref(ref), m_mgr(mgr), m_released(false), m_src_thread(std::this_thread::get_id()) {
     }
 
     HiHandle ( HiHandle && ) = default;

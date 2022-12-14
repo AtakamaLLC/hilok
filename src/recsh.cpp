@@ -70,6 +70,17 @@ void recursive_shared_mutex::unlock()
     m_cond_var.notify_all();
 }
 
+void recursive_shared_mutex::unlock(std::thread::id tid)
+{
+    {
+        std::unique_lock<std::mutex> sync_lock(m_mtx);
+        decrement_exclusive_lock(tid);
+        m_solo_locked = false;
+    }
+    m_cond_var.notify_all();
+}
+
+
 void recursive_shared_mutex::lock_shared()
 {
     std::unique_lock<std::mutex> sync_lock(m_mtx);

@@ -49,12 +49,18 @@ void HiHandle::release() {
 #ifdef HILOK_TRACE
             std::cout << "un: " << kref << " " << 0 << " " << m_shared << std::endl;
 #endif
-            kref->m_mut.unlock_shared();
+            if (m_mgr->m_flags & HiFlags::LOOSE_READ_UNLOCK)
+                kref->m_mut.unlock_shared(m_src_thread);
+            else 
+                kref->m_mut.unlock_shared();
         } else {
 #ifdef HILOK_TRACE
             std::cout << "un: " << kref << " " << 1 << " " << m_shared << std::endl;
 #endif
-            kref->m_mut.unlock();
+            if (m_mgr->m_flags & HiFlags::LOOSE_WRITE_UNLOCK)
+                kref->m_mut.unlock(m_src_thread);
+            else 
+                kref->m_mut.unlock();
         }
         m_mgr->erase_safe(kref);
     }

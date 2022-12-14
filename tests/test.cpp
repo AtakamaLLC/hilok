@@ -7,6 +7,7 @@
 #include <thread>
 #include <iostream>
 #include <array>
+#include <future>
 
 void slow_increment(int &ctr) {
     int x = ctr;
@@ -228,6 +229,19 @@ TEST_CASE( "rename-on-top", "[basic]" ) {
     CHECK(h->size() == 0);
 }
 
+TEST_CASE( "loose-read-unlock", "[basic]" ) {
+    auto h = std::make_shared<HiLok>('/', HiFlags::LOOSE_READ_UNLOCK | HiFlags::RECURSIVE);
+    auto l1 = h->read(h, "a/b/c");
+    auto fut = std::async(std::launch::async, &HiHandle::release, l1);
+    fut.get();
+}
+
+TEST_CASE( "loose-write-unlock", "[basic]" ) {
+    auto h = std::make_shared<HiLok>('/', HiFlags::LOOSE_WRITE_UNLOCK | HiFlags::RECURSIVE);
+    auto l1 = h->write(h, "a");
+    auto fut = std::async(std::launch::async, &HiHandle::release, l1);
+    fut.get();
+}
 
 TEST_CASE( "rename-read-deep", "[basic]" ) {
     auto h = std::make_shared<HiLok>('/', HiFlags::STRICT);
@@ -237,7 +251,6 @@ TEST_CASE( "rename-read-deep", "[basic]" ) {
     l1->release();
     CHECK(h->size() == 0);
 }
-
 
 TEST_CASE( "rlock-simple", "[basic]" ) {
     HiMutex h(HiFlags::RECURSIVE);

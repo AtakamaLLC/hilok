@@ -24,6 +24,7 @@ public:
     bool try_solo_lock();
     bool try_lock_for( const std::chrono::duration<double>& secs);
     void unlock();
+    void unlock(std::thread::id id);
 
     void lock_shared();
     bool try_lock_shared();
@@ -110,11 +111,16 @@ private:
 
     inline void decrement_exclusive_lock()
     {
+        decrement_exclusive_lock(std::this_thread::get_id());
+    }
+
+    inline void decrement_exclusive_lock(std::thread::id tid)
+    {
         if (m_exclusive_count == 0)
         {
             throw HiErr("Not exclusively locked, cannot exclusively unlock");
         }
-        if (m_exclusive_thread_id == std::this_thread::get_id())
+        if (m_exclusive_thread_id == tid)
         {
             m_exclusive_count--;
         }
@@ -123,6 +129,7 @@ private:
             throw HiErr("Calling exclusively unlock from the wrong thread");
         }
     }
+
 
     inline void increment_shared_lock()
     {
