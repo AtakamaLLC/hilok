@@ -62,12 +62,7 @@ bool recursive_shared_mutex::try_solo_lock()
 
 void recursive_shared_mutex::unlock()
 {
-    {
-        std::unique_lock<std::mutex> sync_lock(m_mtx);
-        decrement_exclusive_lock();
-        m_solo_locked = false;
-    }
-    m_cond_var.notify_all();
+    unlock(std::this_thread::get_id());
 }
 
 void recursive_shared_mutex::unlock(std::thread::id tid)
@@ -112,11 +107,7 @@ bool recursive_shared_mutex::try_lock_shared()
 
 void recursive_shared_mutex::unlock_shared()
 {
-    {
-        std::unique_lock<std::mutex> sync_lock(m_mtx);
-        decrement_shared_lock();
-    }
-    m_cond_var.notify_all();
+    unlock_shared(std::this_thread::get_id());
 }
 
 void recursive_shared_mutex::unlock_shared(std::thread::id id)
