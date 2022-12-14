@@ -229,6 +229,15 @@ TEST_CASE( "rename-on-top", "[basic]" ) {
 }
 
 
+TEST_CASE( "rename-read-deep", "[basic]" ) {
+    auto h = std::make_shared<HiLok>('/', false);
+    auto l1 = h->read(h, "a/b/c/d/e/f/g");
+    h->rename("a/b/c/d/e/f/g", "a/b/c");
+    REQUIRE_THROWS_AS(h->write(h, "a/b/c", false), HiErr);
+    l1->release();
+    CHECK(h->size() == 0);
+}
+
 
 TEST_CASE( "rlock-simple", "[basic]" ) {
     HiMutex h(true);

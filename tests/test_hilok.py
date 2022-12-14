@@ -36,21 +36,38 @@ def test_early_rel():
         h.write("/a/b", block=False)
 
 
-def test_rename():
+def test_rename_norec_write():
     h = HiLok(recursive=False)
     with h.write("/a/b"):
-        h.rename("/a/b", "x")
+        h.rename("/a/b", "x", block=False)
         with pytest.raises(HiLokError):
             h.write("x", block=False)
         with h.write("/a/b", block=False):
             pass
-        h.rename("x", "c:/long/path/windows/style")
-        h.rename("c:/long/path/windows/style", "c:/long/path/super")
-        with h.write("c:/long/path"):
-            h.rename("c:/long/path/super", "c:/long/path", block=False)
+        h.rename("x", "c:/long/path/windows/style", block=False)
+        h.rename("c:/long/path/windows/style", "c:/long/path/super", block=False)
+        # long path super is a write lock
+        with h.read("c:/long/path", block=False):
+            pass
+        with pytest.raises(HiLokError):
+            h.write("c:/long/path", block=False)
 
     with pytest.raises(HiLokError):
         h.rename("notthere", "whatever")
+
+def test_rename_norec_read():
+    # real scenario from cvfs
+    h = HiLok(recursive=False)
+    l1 = h.read("/a/b/c/d/e/f/g")
+    h.rename("/a/b/c/d/e/f/g", "/a/b/x")
+
+
+def test_rename_rec_read():
+    # real scenario from cvfs
+    h = HiLok(recursive=True)
+    l1 = h.read("/a/b/c/d/e/f/g")
+    h.rename("/a/b/c/d/e/f/g", "/a/b/x")
+
 
 def test_riaa():
     h = HiLok(recursive=False)
