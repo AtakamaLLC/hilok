@@ -169,7 +169,7 @@ void HiLok::rename(std::string_view path_from, std::string_view path_to, bool bl
     if (!leaf_from_node)
         throw HiErr("rename source lock not found");
 
-    std::pair<std::shared_ptr<HiKeyNode>, std::string> key;
+    std::pair<std::shared_ptr<HiKeyNode>, std::string> to_key;
     
     auto it_from = PathSplit(path_from, m_sep);
     
@@ -181,18 +181,18 @@ void HiLok::rename(std::string_view path_from, std::string_view path_to, bool bl
     std::pair<std::shared_ptr<HiKeyNode>, std::string> from_key;
     while (it_to != it_to.end()) {
         leaf_to = it_to;
-        key = {cur_to, *leaf_to};
+        to_key = {cur_to, *leaf_to};
 
         ++it_to;
         if (common) {
             // common ancestor nodes can be ignored
             from_key = {cur_to, *it_from};
             ++it_from;
-            if (key == from_key) {
+            if (to_key == from_key) {
 #ifdef HILOK_TRACE
                 std::cout << "ig: " << key.first << "/" << key.second << std::endl;
 #endif
-                auto it = m_map.find(key);
+                auto it = m_map.find(to_key);
                 cur_to = it->second;
                 cur_from = it->second;
                 continue;
@@ -205,9 +205,9 @@ void HiLok::rename(std::string_view path_from, std::string_view path_to, bool bl
             // get or create node, as needed for the destination
             // clone lock counts && thread ids from the leaf
 
-            auto it = m_map.find(key);
+            auto it = m_map.find(to_key);
             if (it == m_map.end()) {
-                cur_to = m_map[key] = std::make_shared<HiKeyNode>(key, m_flags);
+                cur_to = m_map[to_key] = std::make_shared<HiKeyNode>(to_key, m_flags);
             } else {
                 cur_to = it->second;
             }
@@ -247,16 +247,18 @@ void HiLok::rename(std::string_view path_from, std::string_view path_to, bool bl
         ++it_from;
     }
     
-    from_key.first.reset(); // refcount for erase
-       
+    from_key.first.reset();
+    cur_to.reset();
+    cur_from.reset();
+
     for (auto nod : to_erase) {
         erase_unsafe(nod);
     }
 
-    // keep leaf locks, change key
+    // keep leaf locks, only change key
     m_map.erase(leaf_from_node->m_key);
-    leaf_from_node->m_key = key;
-    m_map[key] = leaf_from_node;        
+    leaf_from_node->m_key = to_key;
+    m_map[to_key] = leaf_from_node;        
 }
 
 
@@ -268,7 +270,7 @@ void HiLok::erase_safe(std::shared_ptr<HiKeyNode> &ref) {
 void HiLok::erase_unsafe(std::shared_ptr<HiKeyNode> &ref) {
     // lazy speedup, there can be lots of refs (parent->child ref, caller refs, etc.)
     // but if there are too many, we know the exclusive cannot work and is not worth even trying
-    if (ref.use_count() <= 7 && ref->m_inref == 0) {
+    if (ref.use_count() <= 5 && ref->m_inref == 0) {
         // maybe no one else is using it?
         if (ref->m_mut.try_solo_lock() && ref->m_inref == 0) {
             // we now have an exclusive lock, so we really know nobody is using it
