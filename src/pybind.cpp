@@ -10,7 +10,7 @@ PYBIND11_MODULE(hilok, m)
     py::class_<HiLok, std::shared_ptr<HiLok>>(m, "HiLok")
         .def(py::init<>())
         .def(py::init<char>(), py::arg("sep") = '/')
-        .def(py::init<char, bool>(), py::arg("sep") = '/', py::arg("flags") = HiFlags::RECURSIVE_READ + HiFlags::RECURSIVE_WRITE)
+        .def(py::init<char, int>(), py::arg("sep") = '/', py::arg("flags") = HiFlags::RECURSIVE_READ + HiFlags::RECURSIVE_WRITE)
         .def("write", [](std::shared_ptr<HiLok> lok, std::string_view path, std::optional<bool> block, std::optional<double> timeout) {
                 py::gil_scoped_release _gil_rel;
                 if (!block.has_value())

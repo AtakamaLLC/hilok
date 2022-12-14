@@ -14,9 +14,10 @@ struct recursive_shared_mutex
 {
 public:
 
-    recursive_shared_mutex() :
-        m_mtx{}, m_exclusive_thread_id{}, m_exclusive_count{ 0 }, m_shared_locks{}, m_solo_locked{0}, m_wr_only(false)
+    recursive_shared_mutex(bool rec_write_only = false) :
+        m_mtx{}, m_exclusive_thread_id{}, m_exclusive_count{ 0 }, m_shared_locks{}, m_solo_locked{0}, m_wr_only(rec_write_only)
     {}
+
 
     void lock();
     bool try_lock();

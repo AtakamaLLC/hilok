@@ -11,12 +11,14 @@
 #include "recsh.hpp"
 #include "hierr.hpp"
 
-#define mut_op(op) (m_recursive ? m_r_mut.op() : m_t_mut.op())
-#define mut_op_1(op, a) (m_recursive ? m_r_mut.op(a) : m_t_mut.op(a))
+#define mut_op(op) (m_rec_flags ? m_r_mut.op() : m_t_mut.op())
+#define mut_op_1(op, a) (m_rec_flags ? m_r_mut.op(a) : m_t_mut.op(a))
 
  enum HiFlags { 
+     NONE = 0,                  // no recursion, strict release
      RECURSIVE_WRITE = 1,       // allow recursive write locks
      RECURSIVE_READ = 2,        // allow recursive write/read read/write locks
+     RECURSIVE = 3,             // allow both recursive write & read locks
      LOOSE_READ_UNLOCK = 4,     // allow unlocks for read handles to come from other threads
      LOOSE_WRITE_UNLOCK = 8,    // allow unlocks for write handles to come from other threads
  };
@@ -28,11 +30,14 @@ private:
 public:
     std::thread::id m_ex_id;
     std::atomic<int> m_num_r;
-    bool m_recursive;
+    bool m_rec_flags;
     bool m_is_ex;
 
-    HiMutex(bool recursive) : m_num_r(0), m_recursive(recursive), m_is_ex(false) {
+    HiMutex(int rec_flags) : m_r_mut(!(rec_flags & HiFlags::RECURSIVE_READ)), m_num_r(0), m_rec_flags(rec_flags), m_is_ex(false) {
+        if (!(rec_flags == 3 || rec_flags == 0))
+            throw std::runtime_error("wtf");
     }
+    HiMutex(bool) = delete;
 
     bool is_locked() {
         return (m_num_r > 0) || m_is_ex;
@@ -90,7 +95,7 @@ public:
     }
 
     bool try_solo_lock() {
-        if (m_recursive ? m_r_mut.try_solo_lock() : m_t_mut.try_lock()) {
+        if (m_rec_flags ? m_r_mut.try_solo_lock() : m_t_mut.try_lock()) {
             m_is_ex = true;
             return true;
         }
@@ -156,8 +161,9 @@ public:
     std::pair<std::shared_ptr<HiKeyNode>, std::string> m_key;
     HiMutex m_mut;
     std::atomic<int> m_inref;
-    HiKeyNode(std::pair<std::shared_ptr<HiKeyNode>, std::string> key, bool recursive) : m_key(key), m_mut(recursive), m_inref(0) {
+    HiKeyNode(std::pair<std::shared_ptr<HiKeyNode>, std::string> key, int flags) : m_key(key), m_mut(flags), m_inref(0) {
     }
+    HiKeyNode(std::pair<std::shared_ptr<HiKeyNode>, std::string>, bool) = delete;
 };
 
 class HiLok;
@@ -206,6 +212,8 @@ public:
 
     HiLok(char sep = '/', int flags=HiFlags::RECURSIVE_READ + HiFlags::RECURSIVE_WRITE) : m_sep(sep), m_flags(flags) {
     }
+    
+    HiLok(char, bool) = delete;
     
     virtual ~HiLok() {
     }

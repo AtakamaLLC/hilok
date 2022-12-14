@@ -90,7 +90,7 @@ TEST_CASE( "ex-riaa", "[basic]" ) {
 }
 
 TEST_CASE( "rd-in-wr", "[basic]" ) {
-    auto h = std::make_shared<HiLok>('/', false);
+    auto h = std::make_shared<HiLok>('/', 0);
     auto l1 = h->write(h, "a/b/c");
     REQUIRE_THROWS_AS(h->write(h, "a", false), HiErr);
     REQUIRE_THROWS_AS(h->write(h, "a/b", false), HiErr);
@@ -116,7 +116,7 @@ TEST_CASE( "rd-in-wr", "[basic]" ) {
 }
 
 TEST_CASE( "wr-after-rel", "[basic]" ) {
-    auto h = std::make_shared<HiLok>('/', false);
+    auto h = std::make_shared<HiLok>('/', 0);
     auto l1 = h->write(h, "a/b/c");
     l1->release();
 
@@ -166,7 +166,7 @@ bool thread_check_write_locked(std::shared_ptr<HiLok> h, std::string path) {
 }
 
 TEST_CASE( "lock-escalate-deescalate", "[basic]" ) {
-    auto h = std::make_shared<HiLok>('/', true);
+    auto h = std::make_shared<HiLok>('/', HiFlags::RECURSIVE);
     std::cout << "write a" << std::endl;
     auto l1 = h->write(h, "a");
     REQUIRE( h->find_node("a") );
@@ -189,7 +189,7 @@ void dump_map(HiLok &h) {
 }
 
 TEST_CASE( "rename-lock", "[basic]" ) {
-    auto h = std::make_shared<HiLok>('/', false);
+    auto h = std::make_shared<HiLok>('/', 0);
     auto l1 = h->write(h, "a/b/c/d");
     h->rename("a/b/c/d", "a/b/r/x", false);
    
@@ -214,7 +214,7 @@ TEST_CASE( "rename-lock", "[basic]" ) {
 
 
 TEST_CASE( "rename-on-top", "[basic]" ) {
-    auto h = std::make_shared<HiLok>('/', true);
+    auto h = std::make_shared<HiLok>('/', HiFlags::RECURSIVE);
     auto l1 = h->write(h, "a/b/c/d");
     auto l2 = h->write(h, "a/b/c");
     h->rename("a/b/c/d", "a/b/c", false);
@@ -230,7 +230,7 @@ TEST_CASE( "rename-on-top", "[basic]" ) {
 
 
 TEST_CASE( "rename-read-deep", "[basic]" ) {
-    auto h = std::make_shared<HiLok>('/', false);
+    auto h = std::make_shared<HiLok>('/', HiFlags::NONE);
     auto l1 = h->read(h, "a/b/c/d/e/f/g");
     h->rename("a/b/c/d/e/f/g", "a/b/c");
     REQUIRE_THROWS_AS(h->write(h, "a/b/c", false), HiErr);
@@ -240,7 +240,7 @@ TEST_CASE( "rename-read-deep", "[basic]" ) {
 
 
 TEST_CASE( "rlock-simple", "[basic]" ) {
-    HiMutex h(true);
+    HiMutex h(HiFlags::RECURSIVE);
     h.lock();
     h.lock();
     CHECK(h.try_lock());
@@ -257,7 +257,7 @@ void rlock_worker(int, HiMutex &h, int &ctr) {
 }
 
 TEST_CASE( "rlock-thread", "[basic]" ) {
-    HiMutex mut(true);
+    HiMutex mut(HiFlags::RECURSIVE);
     int ctr = 0;
     int pool_size = 100;
     std::vector<std::thread> threads;
@@ -274,7 +274,7 @@ TEST_CASE( "rlock-thread", "[basic]" ) {
 }
 
 TEST_CASE( "shared-simple", "[basic]" ) {
-    HiMutex h(true);
+    HiMutex h(HiFlags::RECURSIVE);
     h.lock_shared();
     h.unlock_shared();
     CHECK(!h.is_locked());
@@ -289,7 +289,7 @@ void hold_lock_until(std::shared_ptr<HiLok> h, std::string p1, std::string p2) {
 
 
 TEST_CASE( "timed-hlock", "[basic]" ) {
-    auto i = GENERATE(true, false);
+    auto i = GENERATE(HiFlags::RECURSIVE, HiFlags::NONE);
     DYNAMIC_SECTION("recursive " << i) {
     auto h = std::make_shared<HiLok>('/', i);
 
@@ -339,7 +339,7 @@ void shared_lock_worker(int, HiMutex &h) {
 }
 
 TEST_CASE( "shared-lock-thread", "[basic]" ) {
-    HiMutex mut(true);
+    HiMutex mut(HiFlags::RECURSIVE);
     int pool_size = 100;
     std::vector<std::thread> threads;
     for(int i = 0; i < pool_size; ++i)
@@ -365,8 +365,8 @@ void nest_lock_worker(int &ctr, HiMutex &h1, HiMutex &h2) {
 }
 
 TEST_CASE( "simulate-nest", "[basic]" ) {
-    HiMutex mut1(true);
-    HiMutex mut2(true);
+    HiMutex mut1(HiFlags::RECURSIVE);
+    HiMutex mut2(HiFlags::RECURSIVE);
     int ctr = 0;
     int pool_size = 100;
     std::vector<std::thread> threads;

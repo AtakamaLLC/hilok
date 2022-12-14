@@ -91,7 +91,7 @@ std::shared_ptr<HiKeyNode> HiLok::_get_node(const std::pair<std::shared_ptr<HiKe
     auto it = m_map.find(key);
     std::shared_ptr<HiKeyNode> ret;
     if (it == m_map.end()) {
-        ret = m_map[key] = std::make_shared<HiKeyNode>(key, is_recursive());
+        ret = m_map[key] = std::make_shared<HiKeyNode>(key, m_flags);
     } else {
         ret = it->second;
     }
@@ -201,7 +201,7 @@ void HiLok::rename(std::string_view path_from, std::string_view path_to, bool bl
 
             auto it = m_map.find(key);
             if (it == m_map.end()) {
-                cur_to = m_map[key] = std::make_shared<HiKeyNode>(key, is_recursive());
+                cur_to = m_map[key] = std::make_shared<HiKeyNode>(key, m_flags);
             } else {
                 cur_to = it->second;
             }
