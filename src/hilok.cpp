@@ -246,7 +246,8 @@ void HiLok::rename(std::string_view path_from, std::string_view path_to, bool bl
         
         ++it_from;
     }
-    
+   
+    // lower refs for erase hint
     from_key.first.reset();
     cur_to.reset();
     cur_from.reset();
