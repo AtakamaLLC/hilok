@@ -214,13 +214,13 @@ TEST_CASE( "rename-lock", "[basic]" ) {
 
 
 TEST_CASE( "rename-on-top", "[basic]" ) {
-    auto h = std::make_shared<HiLok>('/', false);
+    auto h = std::make_shared<HiLok>('/', true);
     auto l1 = h->write(h, "a/b/c/d");
     auto l2 = h->write(h, "a/b/c");
     h->rename("a/b/c/d", "a/b/c", false);
    
     // a/b/c write locked
-    REQUIRE_THROWS_AS(h->read(h, "a/b/c", false), HiErr);
+    CHECK(thread_check_write_locked(h, "a/b/c"));
 
     l1->release();
     l2->release();
