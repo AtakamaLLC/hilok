@@ -43,13 +43,13 @@ PYBIND11_MODULE(hilok, m)
         .def("__exit__", [](std::shared_ptr<HiHandle> hh, const py::object &, const py::object &, const py::object &) { hh->release(); })
         ;
 
-    py::enum_<HiFlags>(m, "Flags", py::arithmetic())
-        .value("HI_RECURSIVE_READ", HiFlags::RECURSIVE_READ)
-        .value("HI_RECURSIVE_WRITE", HiFlags::RECURSIVE_WRITE)
-        .value("HI_LOOSE_READ_UNLOCK", HiFlags::LOOSE_READ_UNLOCK)
-        .value("HI_LOOSE_WRITE_UNLOCK", HiFlags::LOOSE_WRITE_UNLOCK)
-        .value("HI_RECURSIVE_ALL", static_cast<HiFlags>(HiFlags::RECURSIVE_READ + HiFlags::RECURSIVE_WRITE))
-        .export_values();
+    py::enum_<HiFlags>(m, "HiLokFlags", py::arithmetic())
+        .value("STRICT", HiFlags::STRICT)
+        .value("LOOSE_READ_UNLOCK", HiFlags::LOOSE_READ_UNLOCK)
+        .value("LOOSE_WRITE_UNLOCK", HiFlags::LOOSE_WRITE_UNLOCK)
+        .value("RECURSIVE_WRITE", HiFlags::RECURSIVE_WRITE)
+        .value("RECURSIVE", static_cast<HiFlags>(HiFlags::RECURSIVE_READ + HiFlags::RECURSIVE_WRITE))
+        .value("LOOSE_UNLOCK", static_cast<HiFlags>(HiFlags::LOOSE_READ_UNLOCK + HiFlags::LOOSE_WRITE_UNLOCK));
 
     py::register_exception<HiErr>(m, "HiLokError", PyExc_TimeoutError);
 

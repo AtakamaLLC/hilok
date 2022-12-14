@@ -1,9 +1,9 @@
 import pytest
-from hilok import HiLok, HiLokError
+from hilok import HiLok, HiLokError, HiLokFlags
 
 
 def test_wr_no_lev():
-    h = HiLok(recursive=False)
+    h = HiLok(flags=HiLokFlags.STRICT)
     lk = h.write("/a/b")
     lk.release()
     lk = h.write("/a/b")
@@ -13,7 +13,7 @@ def test_wr_no_lev():
 
 
 def test_with_wr():
-    h = HiLok(recursive=False)
+    h = HiLok(flags=0)
     with h.write("/a/b"):
         with pytest.raises(HiLokError):
             h.write("/a/b", block=False)
@@ -23,21 +23,21 @@ def test_with_wr():
 
 
 def test_write_parent():
-    h = HiLok(recursive=False)
+    h = HiLok(flags=0)
     with h.read("/a/b/c/d/e"):
         with pytest.raises(HiLokError):
             h.write("/a/b", timeout=0.1)
 
 
 def test_early_rel():
-    h = HiLok(recursive=False)
+    h = HiLok(flags=HiLokFlags.STRICT)
     with h.write("/a/b") as l:
         l.release()
         h.write("/a/b", block=False)
 
 
 def test_rename_norec_write():
-    h = HiLok(recursive=False)
+    h = HiLok(flags=HiLokFlags.STRICT)
     with h.write("/a/b"):
         h.rename("/a/b", "x", block=False)
         with pytest.raises(HiLokError):
@@ -57,20 +57,20 @@ def test_rename_norec_write():
 
 def test_rename_norec_read():
     # real scenario from cvfs
-    h = HiLok(recursive=False)
+    h = HiLok(flags=HiLokFlags.STRICT)
     l1 = h.read("/a/b/c/d/e/f/g")
     h.rename("/a/b/c/d/e/f/g", "/a/b/x")
 
 
 def test_rename_rec_read():
     # real scenario from cvfs
-    h = HiLok(recursive=True)
+    h = HiLok()
     l1 = h.read("/a/b/c/d/e/f/g")
     h.rename("/a/b/c/d/e/f/g", "/a/b/x")
 
 
 def test_riaa():
-    h = HiLok(recursive=False)
+    h = HiLok(flags=HiLokFlags.STRICT)
     l = h.write("/a/b")
     del l
     l = h.write("/a/b")
@@ -78,7 +78,7 @@ def test_riaa():
 
 
 def test_none():
-    h = HiLok(recursive=False)
+    h = HiLok(flags=0)
     l = h.write("/a/b")
     with pytest.raises(HiLokError):
         # none is allowed, and is ignored
@@ -90,7 +90,7 @@ def test_none():
 
 
 def test_with_rd():
-    h = HiLok(recursive=False)
+    h = HiLok(flags=0)
     with h.read("/a/b"):
         with h.read("/a/b", block=False):
             pass
@@ -101,7 +101,7 @@ def test_with_rd():
 
 
 def test_other_sep():
-    h = HiLok(":", recursive=False)
+    h = HiLok(":", flags=0)
     with h.read("a:b"):
         with pytest.raises(HiLokError):
             h.write("a", block=False)

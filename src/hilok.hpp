@@ -15,7 +15,7 @@
 #define mut_op_1(op, a) (m_rec_flags ? m_r_mut.op(a) : m_t_mut.op(a))
 
  enum HiFlags { 
-     NONE = 0,                  // no recursion, strict release
+     STRICT = 0,                // no recursion, strict release
      RECURSIVE_WRITE = 1,       // allow recursive write locks
      RECURSIVE_READ = 2,        // allow recursive write/read read/write locks
      RECURSIVE = 3,             // allow both recursive write & read locks

@@ -230,7 +230,7 @@ TEST_CASE( "rename-on-top", "[basic]" ) {
 
 
 TEST_CASE( "rename-read-deep", "[basic]" ) {
-    auto h = std::make_shared<HiLok>('/', HiFlags::NONE);
+    auto h = std::make_shared<HiLok>('/', HiFlags::STRICT);
     auto l1 = h->read(h, "a/b/c/d/e/f/g");
     h->rename("a/b/c/d/e/f/g", "a/b/c");
     REQUIRE_THROWS_AS(h->write(h, "a/b/c", false), HiErr);
@@ -299,7 +299,7 @@ void hold_lock_until(std::shared_ptr<HiLok> h, std::string p1, std::string p2) {
 
 
 TEST_CASE( "timed-hlock", "[basic]" ) {
-    auto i = GENERATE(HiFlags::RECURSIVE, HiFlags::NONE);
+    auto i = GENERATE(HiFlags::RECURSIVE, HiFlags::STRICT);
     DYNAMIC_SECTION("recursive " << i) {
     auto h = std::make_shared<HiLok>('/', i);
 
