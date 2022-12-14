@@ -91,7 +91,7 @@ std::shared_ptr<HiKeyNode> HiLok::_get_node(const std::pair<std::shared_ptr<HiKe
     auto it = m_map.find(key);
     std::shared_ptr<HiKeyNode> ret;
     if (it == m_map.end()) {
-        ret = m_map[key] = std::make_shared<HiKeyNode>(key, m_recursive);
+        ret = m_map[key] = std::make_shared<HiKeyNode>(key, is_recursive());
     } else {
         ret = it->second;
     }
@@ -201,7 +201,7 @@ void HiLok::rename(std::string_view path_from, std::string_view path_to, bool bl
 
             auto it = m_map.find(key);
             if (it == m_map.end()) {
-                cur_to = m_map[key] = std::make_shared<HiKeyNode>(key, m_recursive);
+                cur_to = m_map[key] = std::make_shared<HiKeyNode>(key, is_recursive());
             } else {
                 cur_to = it->second;
             }
@@ -215,11 +215,11 @@ void HiLok::rename(std::string_view path_from, std::string_view path_to, bool bl
             }
         }
     }
-    cur_to.reset(); // refcount for erase
+
+    std::vector<std::shared_ptr<HiKeyNode>> to_erase;
 
     while (it_from != it_from.end()) {
         // uncommon ancestor of source must be released
-        ++it_from;
 
         auto it = m_map.find(from_key);
 
@@ -234,11 +234,17 @@ void HiLok::rename(std::string_view path_from, std::string_view path_to, bool bl
         // unlock uncommon ancestors of the source
         cur_from->m_mut.unsafe_clone_unlock_shared(leaf_from_node->m_mut);
 
-        from_key.first.reset(); // refcount for erase
-        // could have went to 0
-        erase_unsafe(cur_from);
-    
+        to_erase.push_back(cur_from);
+
         from_key = {cur_from, *it_from};
+        
+        ++it_from;
+    }
+    
+    from_key.first.reset(); // refcount for erase
+       
+    for (auto nod : to_erase) {
+        erase_unsafe(nod);
     }
 
     // keep leaf locks, change key

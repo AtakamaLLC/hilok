@@ -9,12 +9,13 @@
 #include <map>
 #include "hierr.hpp"
 
+
 struct recursive_shared_mutex
 {
 public:
 
     recursive_shared_mutex() :
-        m_mtx{}, m_exclusive_thread_id{}, m_exclusive_count{ 0 }, m_shared_locks{}, m_solo_locked{0}
+        m_mtx{}, m_exclusive_thread_id{}, m_exclusive_count{ 0 }, m_shared_locks{}, m_solo_locked{0}, m_wr_only(false)
     {}
 
     void lock();
@@ -27,6 +28,7 @@ public:
     bool try_lock_shared();
     bool try_lock_shared_for(const std::chrono::duration<double>& secs);
     void unlock_shared();
+    void unlock_shared(std::thread::id id);
 
     recursive_shared_mutex(const recursive_shared_mutex&) = delete;
     recursive_shared_mutex& operator=(const recursive_shared_mutex&) = delete;
@@ -50,7 +52,7 @@ private:
 
     inline bool can_start_exclusive_lock()
     {
-        return !is_exclusive_locked() && (!is_shared_locked() || is_shared_locked_only_on_this_thread());
+        return !is_exclusive_locked() && (!is_shared_locked() || (!m_wr_only && is_shared_locked_only_on_this_thread()));
     }
 
     inline bool can_start_solo_lock()
@@ -172,6 +174,7 @@ private:
     std::map<std::thread::id, size_t> m_shared_locks;
     std::condition_variable m_cond_var;
     bool m_solo_locked;
+    bool m_wr_only;
 };
 
 #endif

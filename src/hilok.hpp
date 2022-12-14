@@ -14,6 +14,13 @@
 #define mut_op(op) (m_recursive ? m_r_mut.op() : m_t_mut.op())
 #define mut_op_1(op, a) (m_recursive ? m_r_mut.op(a) : m_t_mut.op(a))
 
+ enum HiFlags { 
+     RECURSIVE_WRITE = 1,       // allow recursive write locks
+     RECURSIVE_READ = 2,        // allow recursive write/read read/write locks
+     LOOSE_READ_UNLOCK = 4,     // allow unlocks for read handles to come from other threads
+     LOOSE_WRITE_UNLOCK = 8,    // allow unlocks for write handles to come from other threads
+ };
+
 class HiMutex {
 private: 
     recursive_shared_mutex m_r_mut;
@@ -192,16 +199,18 @@ public:
     std::unordered_map<std::pair<std::shared_ptr<HiKeyNode>, std::string>, std::shared_ptr<HiKeyNode>, pair_hash> m_map;
     std::mutex m_mutex;
     char m_sep;
-    bool m_recursive;
+    int m_flags;
     std::shared_ptr<HiKeyNode> _get_node(const std::pair<std::shared_ptr<HiKeyNode>, std::string> &key);
 
 public:
 
-    HiLok(char sep = '/', bool recursive=true) : m_sep(sep), m_recursive(recursive) {
+    HiLok(char sep = '/', int flags=HiFlags::RECURSIVE_READ + HiFlags::RECURSIVE_WRITE) : m_sep(sep), m_flags(flags) {
     }
     
     virtual ~HiLok() {
     }
+
+    bool is_recursive() {return m_flags & (HiFlags::RECURSIVE_READ | HiFlags::RECURSIVE_WRITE);}
 
     std::shared_ptr<HiKeyNode> find_node(std::string_view path_from);
 

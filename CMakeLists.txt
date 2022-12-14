@@ -28,6 +28,7 @@ conan_cmake_install(PATH_OR_REFERENCE . BUILD missing SETTINGS ${settings})
 option(ENABLE_TESTS "Enable tests" OFF)
 option(ENABLE_TSAN "Enable tsan" OFF)
 option(ENABLE_COVERAGE "Enable coverage" OFF)
+option(ENABLE_TRACE "Enable lock tracing" OFF)
 
 if (${ENABLE_TESTS})
 
@@ -61,6 +62,9 @@ if (${ENABLE_TSAN})
   target_link_libraries(tests PRIVATE tsan)
 endif()
 
+if (${ENABLE_TRACE})
+    target_compile_definitions(tests  PRIVATE "-DHILOK_TRACE")
+endif()
 
 ############# codecov
 if (${ENABLE_COVERAGE})
