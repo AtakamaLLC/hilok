@@ -249,7 +249,7 @@ TEST_CASE( "rename-read-deep", "[basic]" ) {
     auto h = std::make_shared<HiLok>('/', i);
     auto l1 = h->read(h, "a/b/c/d/e/f/g");
     h->rename("a/b/c/d/e/f/g", "a/b/c");
-    REQUIRE_THROWS_AS(h->write(h, "a/b/c", false), HiErr);
+    REQUIRE(thread_check_read_locked(h, "a/b/c"));
     l1->release();
     CHECK(h->size() == 0);
     }
@@ -259,11 +259,14 @@ TEST_CASE( "rename-no-overlap", "[basic]" ) {
     auto i = GENERATE(HiFlags::RECURSIVE, HiFlags::STRICT);
     DYNAMIC_SECTION("recursive " << i) {
     auto h = std::make_shared<HiLok>('/', i);
-    auto l1 = h->read(h, "a/b/c");
-    auto l2 = h->read(h, "d/e/f");
-    h->rename("a/b/c", "d/e/f");
+    auto l1 = h->read(h, "a/b");
+    auto l2 = h->read(h, "d/e");
+    h->rename("a/b", "d/e");
+    INFO("1 unl old a/b (renamed to d/e), should unl d/e");
     l1->release();
+    INFO("2 unl old d/e (gone... should unl old stuff)");
     l2->release();
+    INFO("3 done");
     CHECK(h->size() == 0);
     }
 }

@@ -190,7 +190,7 @@ void HiLok::rename(std::string_view path_from, std::string_view path_to, bool bl
             ++it_from;
             if (to_key == from_key) {
 #ifdef HILOK_TRACE
-                std::cout << "ig: " << key.first << "/" << key.second << std::endl;
+                std::cout << "ig: " << to_key.first << "/" << to_key.second << std::endl;
 #endif
                 auto it = m_map.find(to_key);
                 cur_to = it->second;
@@ -213,12 +213,20 @@ void HiLok::rename(std::string_view path_from, std::string_view path_to, bool bl
             }
 
 #ifdef HILOK_TRACE
-            std::cout << "clon lk: " << key.first << "/" << key.second << ":" << cur_to << " " << leaf_from_node->m_mut.m_is_ex << std::endl;
+            std::cout << "clon was: " << cur_to->m_mut.m_num_r << std::endl;
+#endif
+
+#ifdef HILOK_TRACE
+            std::cout << "clon lk: " << to_key.first << "/" << to_key.second << ":" << cur_to << " " << leaf_from_node->m_mut.m_num_r + leaf_from_node->m_mut.m_is_ex << std::endl;
 #endif
             // copy lock counts from the leaf to the ancestor
             if (!cur_to->m_mut.unsafe_clone_lock_shared(leaf_from_node->m_mut, block, secs)) {
                 throw HiErr("unable to lock rename dest");
             }
+
+#ifdef HILOK_TRACE
+            std::cout << "clon new: " << cur_to->m_mut.m_num_r << std::endl;
+#endif
         }
     }
 
@@ -235,7 +243,7 @@ void HiLok::rename(std::string_view path_from, std::string_view path_to, bool bl
         cur_from = it->second;
 
 #ifdef HILOK_TRACE
-        std::cout << "clon un: " << from_key.first << "/" << from_key.second << ":" << cur_from << std::endl;
+        std::cout << "clon un: " << from_key.first << "/" << from_key.second << ":" << cur_from << " " << leaf_from_node->m_mut.m_num_r + leaf_from_node->m_mut.m_is_ex << std::endl;
 #endif
         // unlock uncommon ancestors of the source
         cur_from->m_mut.unsafe_clone_unlock_shared(leaf_from_node->m_mut);

@@ -50,7 +50,7 @@ public:
 
 
     bool unsafe_clone_lock_shared(HiMutex &src, bool block, double secs) {
-        auto num = (src.m_num_r + (src.m_is_ex ? 1 : 0));
+        auto num = (m_num_r + src.m_num_r + (src.m_is_ex ? 1 : 0));
         while (m_num_r < num) {
             if (!lock_shared(block, secs)) {
                 return false;
