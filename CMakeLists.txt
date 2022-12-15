@@ -28,6 +28,7 @@ conan_cmake_install(PATH_OR_REFERENCE . BUILD missing SETTINGS ${settings})
 option(ENABLE_TESTS "Enable tests" OFF)
 option(ENABLE_TSAN "Enable tsan" OFF)
 option(ENABLE_COVERAGE "Enable coverage" OFF)
+option(ENABLE_TRACE "Enable lock tracing" OFF)
 
 if (${ENABLE_TESTS})
 
@@ -61,11 +62,14 @@ if (${ENABLE_TSAN})
   target_link_libraries(tests PRIVATE tsan)
 endif()
 
+if (${ENABLE_TRACE})
+    target_compile_definitions(tests  PRIVATE "-DHILOK_TRACE")
+endif()
 
 ############# codecov
 if (${ENABLE_COVERAGE})
-    SET(CMAKE_CXX_FLAGS_DEBUG "-O0")
-    SET(CMAKE_C_FLAGS_DEBUG "-O0")
+    SET(CMAKE_CXX_FLAGS_DEBUG "-O0 -fno-inline -fno-inline-small-functions -fno-default-inline")
+    SET(CMAKE_C_FLAGS_DEBUG "-O0 -fno-inline -fno-inline-small-functions -fno-default-inline")
     set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/externals/CMake-codecov/cmake" ${CMAKE_MODULE_PATH})
     find_package(codecov)
     add_coverage(tests)
