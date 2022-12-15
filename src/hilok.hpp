@@ -35,7 +35,7 @@ public:
     bool m_is_ex;
 
     HiMutex(int rec_flags) : m_r_mut(!(rec_flags & HiFlags::RECURSIVE_READ)), m_num_r(0), m_rec_flags(rec_flags), m_is_ex(false) {
-        if (rec_flags == 2) 
+        if ((rec_flags & HiFlags::RECURSIVE) == HiFlags::RECURSIVE_READ) 
             throw std::logic_error("recursive read only is not supported");
     }
     HiMutex(bool) = delete;

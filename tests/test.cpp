@@ -234,6 +234,7 @@ TEST_CASE( "loose-read-unlock", "[basic]" ) {
     auto l1 = h->read(h, "a/b/c");
     auto fut = std::async(std::launch::async, &HiHandle::release, l1);
     fut.get();
+    auto l2 = h->write(h, "a/b/c", false);
 }
 
 TEST_CASE( "loose-write-unlock", "[basic]" ) {
@@ -241,6 +242,7 @@ TEST_CASE( "loose-write-unlock", "[basic]" ) {
     auto l1 = h->write(h, "a");
     auto fut = std::async(std::launch::async, &HiHandle::release, l1);
     fut.get();
+    auto l2 = h->read(h, "a", false);
 }
 
 TEST_CASE( "rename-read-deep", "[basic]" ) {
@@ -254,6 +256,19 @@ TEST_CASE( "rename-read-deep", "[basic]" ) {
     CHECK(h->size() == 0);
     }
 }
+
+TEST_CASE( "rename-same-nothing", "[basic]" ) {
+    auto i = GENERATE(HiFlags::RECURSIVE, HiFlags::STRICT);
+    DYNAMIC_SECTION("recursive " << i) {
+    auto h = std::make_shared<HiLok>('/', i);
+    auto l1 = h->write(h, "a/b/c");
+    h->rename("a/b/c", "a/b/c");
+    REQUIRE(thread_check_write_locked(h, "a/b/c"));
+    l1->release();
+    CHECK(h->size() == 0);
+    }
+}
+
 
 TEST_CASE( "rename-no-overlap", "[basic]" ) {
     auto i = GENERATE(HiFlags::RECURSIVE, HiFlags::STRICT);

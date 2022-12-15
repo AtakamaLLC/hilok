@@ -260,7 +260,7 @@ void HiLok::rename(std::string_view path_from, std::string_view path_to, bool bl
     cur_to.reset();
     cur_from.reset();
 
-    for (auto nod : to_erase) {
+    for (auto &nod : to_erase) {
         erase_unsafe(nod);
     }
 
