@@ -36,6 +36,16 @@ def test_early_rel():
         h.write("/a/b", block=False)
 
 
+def test_nonoverlap():
+    f1 = "a/b"
+    f2 = "c/d"
+
+    h = HiLok(flags=HiLokFlags.RECURSIVE)
+   
+    with h.read(f1), h.read(f2):
+        h.rename(f1, f2)
+    
+
 def test_rename_norec_write():
     h = HiLok(flags=HiLokFlags.STRICT)
     with h.write("/a/b"):

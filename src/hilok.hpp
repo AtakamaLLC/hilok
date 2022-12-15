@@ -204,7 +204,10 @@ public:
     HiHandle & operator= ( const HiHandle & ) = delete;
 
     virtual ~HiHandle() {
-        release();
+        try {
+            release();
+        } catch (HiErr &) {
+        }
     }
 
     void release();
