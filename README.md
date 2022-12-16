@@ -6,7 +6,7 @@ Locks are, by default, shared, recursive & timed.
 
 First optional argument to the lock manager is the "sep".
 
-Second optional argument is "recursive" (default true).
+Second optional argument is "flags" (default is HiFlags.RECURSIVE, can be also be HiFlags:STRICT).
 
 ```python
 from hilok import HiLok
