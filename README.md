@@ -33,4 +33,9 @@ with h.read("/some/path"):
     pass
 ```
 
-Lock escalation (read/write/release-read) and de-escalation (write/read/release-write) are supported when RECURSIVE is enabled.
+Lock modes:
+
+ - `HiLokFlags.STRICT` : not reentrant, the good mode
+ - `HiLokFlags.RECURSIVE` : fully reentrant, supports escalation (read/write/release-read) and de-escalation (write/read/release-write)
+ - `HiLokFlags.RECURSIVE_WRITE` : only write-locks are reentrant
+ - `HiLokFlags.RECURSIVE_ONEWAY` : can read-lock while holding a write, but not vice-versa
