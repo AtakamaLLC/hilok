@@ -7,10 +7,20 @@ namespace py = pybind11;
 PYBIND11_MODULE(hilok, m)
 {   
     m.doc() = "Hierarchical lock manager";
+
+    py::enum_<HiFlags>(m, "HiLokFlags", py::arithmetic())
+        .value("STRICT", HiFlags::STRICT)
+        .value("LOOSE_READ_UNLOCK", HiFlags::LOOSE_READ_UNLOCK)
+        .value("LOOSE_WRITE_UNLOCK", HiFlags::LOOSE_WRITE_UNLOCK)
+        .value("RECURSIVE_WRITE", HiFlags::RECURSIVE_WRITE)
+        .value("RECURSIVE_ONEWAY", HiFlags::RECURSIVE_ONEWAY)
+        .value("RECURSIVE", HiFlags::RECURSIVE)
+        .value("LOOSE_UNLOCK", static_cast<HiFlags>(HiFlags::LOOSE_READ_UNLOCK + HiFlags::LOOSE_WRITE_UNLOCK));
+
     py::class_<HiLok, std::shared_ptr<HiLok>>(m, "HiLok")
         .def(py::init<>())
         .def(py::init<char>(), py::arg("sep") = '/')
-        .def(py::init<char, int>(), py::arg("sep") = '/', py::arg("flags") = HiFlags::RECURSIVE_READ + HiFlags::RECURSIVE_WRITE)
+        .def(py::init<char, int>(), py::arg("sep") = '/', py::arg("flags") = HiFlags::RECURSIVE)
         .def("write", [](std::shared_ptr<HiLok> lok, std::string_view path, std::optional<bool> block, std::optional<double> timeout) {
                 py::gil_scoped_release _gil_rel;
                 if (!block.has_value())
@@ -42,14 +52,6 @@ PYBIND11_MODULE(hilok, m)
         .def("__enter__", [](std::shared_ptr<HiHandle> hh) {return hh;})
         .def("__exit__", [](std::shared_ptr<HiHandle> hh, const py::object &, const py::object &, const py::object &) { hh->release(); })
         ;
-
-    py::enum_<HiFlags>(m, "HiLokFlags", py::arithmetic())
-        .value("STRICT", HiFlags::STRICT)
-        .value("LOOSE_READ_UNLOCK", HiFlags::LOOSE_READ_UNLOCK)
-        .value("LOOSE_WRITE_UNLOCK", HiFlags::LOOSE_WRITE_UNLOCK)
-        .value("RECURSIVE_WRITE", HiFlags::RECURSIVE_WRITE)
-        .value("RECURSIVE", static_cast<HiFlags>(HiFlags::RECURSIVE_READ + HiFlags::RECURSIVE_WRITE))
-        .value("LOOSE_UNLOCK", static_cast<HiFlags>(HiFlags::LOOSE_READ_UNLOCK + HiFlags::LOOSE_WRITE_UNLOCK));
 
     py::register_exception<HiErr>(m, "HiLokError", PyExc_TimeoutError);
 

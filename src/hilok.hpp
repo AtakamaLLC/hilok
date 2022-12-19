@@ -15,14 +15,17 @@
 #define mut_op(op) (is_recursive() ? m_r_mut.op() : m_t_mut.op())
 #define mut_op_1(op, a) (is_recursive() ? m_r_mut.op(a) : m_t_mut.op(a))
 
- enum HiFlags { 
+enum HiFlags { 
      STRICT = 0,                // no recursion, strict release
-     RECURSIVE_WRITE = 1,       // allow recursive write locks
-     RECURSIVE_READ = 2,        // allow recursive write/read read/write locks
-     RECURSIVE = 3,             // allow both recursive write & read locks
-     LOOSE_READ_UNLOCK = 4,     // allow unlocks for read handles to come from other threads
-     LOOSE_WRITE_UNLOCK = 8,    // allow unlocks for write handles to come from other threads
- };
+     RECURSIVE_WRITE = 1,       // allow recursive write/write locks only
+     RECURSIVE_ONEWAY = 2,      // allow recursive write then read, but not vice versa
+     RECURSIVE = 3,             // allow all recursion
+     RECURSIVE_MODE_MASK = 7,   // mask that covers recursive modes
+     LOOSE_READ_UNLOCK = 8,     // allow unlocks for read handles to come from other threads
+     LOOSE_WRITE_UNLOCK = 16,   // allow unlocks for write handles to come from other threads
+};
+
+#define RECURSIVE_MODE(f) (f & RECURSIVE_MODE_MASK)
 
 class HiMutex {
 private: 
@@ -34,9 +37,7 @@ public:
     int m_rec_flags;
     bool m_is_ex;
 
-    HiMutex(int rec_flags) : m_r_mut(!(rec_flags & HiFlags::RECURSIVE_READ)), m_num_r(0), m_rec_flags(rec_flags), m_is_ex(false) {
-        if ((rec_flags & HiFlags::RECURSIVE) == HiFlags::RECURSIVE_READ) 
-            throw std::logic_error("recursive read only is not supported");
+    HiMutex(int rec_flags) : m_r_mut(RECURSIVE_MODE(rec_flags) == RECURSIVE_WRITE, RECURSIVE_MODE(rec_flags) == RECURSIVE_ONEWAY), m_num_r(0), m_rec_flags(rec_flags), m_is_ex(false) {
     }
     HiMutex(bool) = delete;
 
@@ -45,7 +46,7 @@ public:
     }
 
     bool is_recursive() {
-        return m_rec_flags & HiFlags::RECURSIVE;
+        return RECURSIVE_MODE(m_rec_flags) != 0;
     }
 
 
@@ -232,7 +233,7 @@ public:
 
 public:
 
-    HiLok(char sep = '/', int flags=HiFlags::RECURSIVE_READ + HiFlags::RECURSIVE_WRITE) : m_sep(sep), m_flags(flags) {
+    HiLok(char sep = '/', int flags=HiFlags::RECURSIVE) : m_sep(sep), m_flags(flags) {
     }
     
     HiLok(char, bool) = delete;
@@ -240,7 +241,7 @@ public:
     virtual ~HiLok() {
     }
 
-    bool is_recursive() {return m_flags & (HiFlags::RECURSIVE_READ | HiFlags::RECURSIVE_WRITE);}
+    bool is_recursive() {return m_flags & (HiFlags::RECURSIVE_MODE_MASK);}
 
     std::shared_ptr<HiKeyNode> find_node(std::string_view path_from);
 

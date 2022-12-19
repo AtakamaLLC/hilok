@@ -6,10 +6,10 @@ Locks are, by default, shared, recursive & timed.
 
 First optional argument to the lock manager is the "sep".
 
-Second optional argument is "recursive" (default true).
+Second optional argument is "flags" (default is HiLokFlags.RECURSIVE, can be also be HiLokFlags:STRICT).
 
 ```python
-from hilok import HiLok
+from hilok import HiLok, HiLokError, HiLokFlags
 
 h = HiLok()     # default sep is '/', can pass it in here
 
@@ -18,7 +18,7 @@ rd = h.read("/some/path")
 # nonblocking, this will fail!
 try:
     wr = h.write("/some", block=False)
-except TimeoutError:
+except HiLokError:
     pass
 
 rd.release()
@@ -33,4 +33,9 @@ with h.read("/some/path"):
     pass
 ```
 
-Lock escalation (read/write/release-read) and de-escalation (write/read/release-write) are supported.
+Lock modes:
+
+ - `HiLokFlags.STRICT` : not reentrant, the good mode
+ - `HiLokFlags.RECURSIVE` : fully reentrant, supports escalation (read/write/release-read) and de-escalation (write/read/release-write)
+ - `HiLokFlags.RECURSIVE_WRITE` : only write-locks are reentrant
+ - `HiLokFlags.RECURSIVE_ONEWAY` : can read-lock while holding a write, but not vice-versa

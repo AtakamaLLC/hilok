@@ -14,8 +14,8 @@ struct recursive_shared_mutex
 {
 public:
 
-    recursive_shared_mutex(bool rec_write_only = false) :
-        m_mtx{}, m_exclusive_thread_id{}, m_exclusive_count{ 0 }, m_shared_locks{}, m_solo_locked{0}, m_wr_only(rec_write_only)
+    recursive_shared_mutex(bool rec_write_only = false, bool rec_one_way = false) :
+        m_mtx{}, m_exclusive_thread_id{}, m_exclusive_count{ 0 }, m_shared_locks{}, m_solo_locked{0}, m_wr_only(rec_write_only), m_one_way(rec_one_way)
     {}
 
 
@@ -54,7 +54,7 @@ private:
 
     inline bool can_start_exclusive_lock()
     {
-        return !is_exclusive_locked() && (!is_shared_locked() || (!m_wr_only && is_shared_locked_only_on_this_thread()));
+        return !is_exclusive_locked() && (!is_shared_locked() || (!m_wr_only && !m_one_way && is_shared_locked_only_on_this_thread()));
     }
 
     inline bool can_start_solo_lock()
@@ -64,7 +64,7 @@ private:
 
     inline bool can_increment_exclusive_lock()
     {
-        return is_exclusive_locked_on_this_thread() && !m_solo_locked;
+        return is_exclusive_locked_on_this_thread() && !m_solo_locked && (!m_one_way || !is_shared_locked());
     }
 
     inline bool can_lock_shared()
@@ -183,6 +183,7 @@ private:
     std::condition_variable m_cond_var;
     bool m_solo_locked;
     bool m_wr_only;
+    bool m_one_way;
 };
 
 #endif

@@ -172,12 +172,12 @@ TEST_CASE( "lock-escalate-deescalate", "[basic]" ) {
     auto l1 = h->write(h, "a");
     REQUIRE( h->find_node("a") );
     std::cout << "read a" << std::endl;
-    auto l2 = h->read(h, "a");
+    auto l2 = h->read(h, "a", false);
     l1->release();
     auto nod = h->find_node("a");
     REQUIRE(nod);
     CHECK(thread_check_read_locked(h, "a"));
-    auto l3 = h->write(h, "a");
+    auto l3 = h->write(h, "a", false);
     l2->release();
     CHECK(thread_check_write_locked(h, "a"));
     l3->release();
@@ -301,6 +301,21 @@ TEST_CASE( "rlock-wronly", "[basic]" ) {
     h.lock();
     CHECK(!h.try_lock_shared());
     CHECK(h.try_lock());
+    h.unlock();
+    h.unlock();
+}
+
+TEST_CASE( "rlock-oneway", "[basic]" ) {
+    HiMutex h(HiFlags::RECURSIVE_ONEWAY);
+    h.lock();
+    h.lock();
+    CHECK(h.try_lock_shared());
+    CHECK(h.try_lock_shared());
+    CHECK(!h.try_lock());
+    h.unlock_shared();
+    h.unlock_shared();
+    CHECK(h.try_lock());
+    h.unlock();
     h.unlock();
     h.unlock();
 }
