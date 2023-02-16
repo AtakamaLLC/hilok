@@ -562,3 +562,18 @@ TEST_CASE( "rename-threads", "[basic]" ) {
     CHECK(h->size() == 0);
 }
 
+
+void rename_other_lock(std::shared_ptr<HiLok> &h) {
+    h->rename("a/b/c", "a/c");
+}
+
+
+TEST_CASE( "rename-wrong-thread", "[basic]" ) {
+    auto h = std::make_shared<HiLok>('/', HiFlags::RECURSIVE_ONEWAY | HiFlags::LOOSE_READ_UNLOCK);
+    auto ll = h->read(h, "a/b/c");
+    std::thread thread([&h] () { rename_other_lock(h); });
+    thread.join();
+    CHECK(thread_check_read_locked(h, "a/c"));
+    ll->release();
+}
+

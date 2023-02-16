@@ -63,7 +63,7 @@ public:
     void unsafe_clone_unlock_shared(HiMutex &src) {
         auto num = (src.m_num_r + (src.m_is_ex ? 1 : 0));
         while (num > 0) {
-            unlock_shared();
+            unlock_shared(true);
             --num;
         }
     }
@@ -163,8 +163,12 @@ public:
         return ret;
     }
 
-    void unlock_shared() {
-        mut_op(unlock_shared);
+    void unlock_shared(bool any_thread = 0) {
+        if(is_recursive() && any_thread) {
+            m_r_mut.unlock_any_shared();
+        } else {
+            mut_op(unlock_shared);
+        }
         --m_num_r;
     }
 
