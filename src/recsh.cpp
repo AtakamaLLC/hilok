@@ -118,3 +118,12 @@ void recursive_shared_mutex::unlock_shared(std::thread::id id)
     }
     m_cond_var.notify_all();
 }
+
+void recursive_shared_mutex::unlock_any_shared()
+{
+    {
+        std::unique_lock<std::mutex> sync_lock(m_mtx);
+        decrement_any_shared_lock(std::this_thread::get_id());
+    }
+    m_cond_var.notify_all();
+}

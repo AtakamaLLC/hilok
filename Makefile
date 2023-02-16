@@ -16,10 +16,12 @@ pybuild:
 cbuild:
 	mkdir cbuild
 
-ctest: cbuild
+ctest: cmake
+	cd cbuild; ctest -v --output-on-failure $(MEMCHECK_FLAGS) .
+
+cmake: cbuild
 	cd cbuild; cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=On
 	cd cbuild; cmake --build . -j
-	cd cbuild; ctest -v --output-on-failure $(MEMCHECK_FLAGS) .
 
 covtest: cbuild
 	cd cbuild; cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=On -DENABLE_COVERAGE=On
@@ -42,5 +44,5 @@ publish:
 	python setup.py bdist bdist_wheel
 	twine upload dist/*
 
-.PHONY: publish venv requirements pytest pybuild ctest
+.PHONY: publish venv requirements pytest pybuild ctest cmake
 .DELETE_ON_ERROR:

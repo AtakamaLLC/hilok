@@ -30,6 +30,7 @@ public:
     bool try_lock_shared();
     bool try_lock_shared_for(const std::chrono::duration<double>& secs);
     void unlock_shared();
+    void unlock_any_shared();
     void unlock_shared(std::thread::id id);
 
     recursive_shared_mutex(const recursive_shared_mutex&) = delete;
@@ -151,6 +152,25 @@ private:
     inline void decrement_shared_lock()
     {
         decrement_shared_lock(std::this_thread::get_id());
+    }
+
+    inline void decrement_any_shared_lock(std::thread::id id)
+    {
+        if (m_shared_locks.size() == 0)
+        {
+            throw HiErr("Not shared locked, cannot shared unlock");
+        }
+        auto pos = m_shared_locks.find(id);
+        if (pos == m_shared_locks.end())
+            pos = m_shared_locks.begin();
+        if (pos->second == 1)
+        {
+            m_shared_locks.erase(pos);
+        }
+        else
+        {
+            pos->second -= 1;
+        }
     }
 
     inline void decrement_shared_lock(std::thread::id id)
